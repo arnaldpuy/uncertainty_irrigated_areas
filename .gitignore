@@ -4,7 +4,7 @@
 # But not these files...
 !.gitignore
 !README.md
-!full.dataset2.csv
+!full.dataset2.xlsx
 !density_population.csv
 !aquastat.csv
 !table_4.csv
