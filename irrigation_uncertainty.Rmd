@@ -1529,6 +1529,13 @@ plot_grid(a, b,
           rel_widths = c(2, 1.7))
 ```
 
+```{r global_only, cache=TRUE, dependson="plot_uncertainty", dev="tikz", fig.height=2.5, fig.width=3.3}
+
+b +
+  theme(plot.margin = margin(l = 0, unit = "cm"))
+```
+
+
 ```{r export_global, cache=TRUE, dependson="global_uncertainty"}
 
 # EXPORT GLOBAL UNCERTAINTY ---------------------------------------------------
