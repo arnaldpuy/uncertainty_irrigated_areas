@@ -55,15 +55,20 @@ loadPackages <- function(x) {
 loadPackages(c("data.table", "fitdistrplus", "fGarch", "readxl", "countrycode",
                "scales", "tidyverse", "cowplot", "mvoutlier", "complmrob",
                "randtoolbox","robustbase", "parallel", "smatr", "boot", 
-               "doParallel", "sensitivity", "wesanderson", "sensobol", 
+               "doParallel", "sensitivity", "wesanderson", 
                "grid", "gridExtra", "NbClust"))
+
+# install and load sensobol 0.2.1
+PackageURL <- "https://cran.r-project.org/src/contrib/Archive/sensobol/sensobol_0.2.1.tar.gz"
+install.packages(PackageURL, repos=NULL, type="source")
+library(sensobol)
 
 # Set checkpoint
 
 dir.create(".checkpoint")
 library("checkpoint")
 
-checkpoint("2019-08-28", 
+checkpoint("2020-03-11", 
            R.version ="3.6.1", 
            checkpointLocation = getwd())
 
@@ -613,7 +618,7 @@ total.area.irrigated <- df$meier %>%
 
 # DEFINE NUMBER OF BOOTSTRAP REPLICAS -----------------------------------------
 
-R <- 10^4
+R <- 5000
 ```
 
 ```{r ols_regressions, dependson=c("datasets", "compute_water_requirements", "define_bootstrap_replicas"), cache=TRUE}
@@ -1102,14 +1107,14 @@ parameters <- c("X1", "X2", "X3", "X4", "W1", "W3", "W4", "r",
 k <- length(parameters)
 
 # Select sample size
-n <- 2 ^ 17
+n <- 2 ^ 13
 
 # Create vector with the continents
 Continents <- c("Africa", "Americas", "Asia", "Europe")
 
 # Create an A, B and AB matrices for each continent
-AB <- lapply(Continents, function(Continents) sobol_matrices(n = n, 
-                                                             k = k) %>%
+AB <- lapply(Continents, function(Continents) 
+  sobol_matrices(n = n, k = k) %>%
                data.table()) 
 
 # Name the slots, each is a continent
@@ -1306,10 +1311,9 @@ model <- function(X) {
   Phi <- tmp[, Phi]
   Delta <- tmp[, Delta]
   # COMPUTE THE MODEL ---------------------------
-  Y <- X[, Y0] + 
-    10 ^ (Intercept + Slope * Beta + X[, epsilon]) * Beta * X[, r] * 
-    (N ^ (1 - X[, gamma]) + X[, r] * X[, t] * (1 - X[, gamma])) ^
-    ((Beta + X[, gamma] - 1) / (1 - X[, gamma])) 
+  Y <- X[, Y0] + 10 ^ (Intercept + Slope * Beta + X[, epsilon]) * 
+  ((N ^ (1- X[, gamma]) + X[, r] * X[, t] * (1 - X[, gamma])) ^ 
+     (Beta / (1 - X[, gamma])) - N ^ Beta)
   # Compute how much water will we need to irrigate Y
   w <- (10 ^ Phi) * Y ^ Delta
   # Compute how much water we have 
@@ -1322,6 +1326,9 @@ model <- function(X) {
   # Constrain
   if(Y > X[, K]) {
     Y <- X[, K]
+  }
+  if(Y < 0) {
+    Y <- X[, Y0]
   }
   if(Y > Y.max) {
     Y <- Y.max
@@ -1430,9 +1437,33 @@ global.quantile <- quantile(global.uncertainty$Total,
 print(global.quantile)
 ```
 
-```{r plot_uncertainty_final, cache=TRUE, dependson=c("global_uncertainty", "quantiles", "arrange_output"), dev="tikz", fig.height=3.8, fig.width=6.5}
+```{r read_projections}
 
-# PLOT UNCERTAINTY ------------------------------------------------------------
+# READ PROJECTIONS OF IRRIGATED AREAS AT THE CONTINENTAL LEVEL ------------------
+
+irrigated_area_2050 <- fread("irrigated_area_2050.csv")[, World:= NULL]
+irrigated_area_2050_dt <- melt(irrigated_area_2050, 
+                               measure.vars = c("Africa", "Americas", "Europe", "Asia"), 
+                               variable.name = "Continent")
+
+# Get minimum and maximum
+prove <- irrigated_area_2050_dt[, .(min = min(value, na.rm = TRUE), 
+                                    max = max(value, na.rm = TRUE)), 
+                                Continent]
+
+# Proportion of model runs covered by current projections (min and max)
+sapply(Continents, function(x) AB.dt[Continent == x, 
+                                     sum(Y >= prove[Continent == x, min] & 
+                                           Y<= prove[Continent == x, max]) / .N])
+
+# Proportion of model runs larger than the maximum value projected
+sapply(Continents, function(x) AB.dt[Continent == x, 
+                                     sum(Y >= prove[Continent == x, max]) / .N])
+```
+
+```{r plot_uncertainty_final, cache=TRUE, dependson=c("global_uncertainty", "quantiles", "arrange_output", "read_projections"), dev="tikz", fig.height=4.5, fig.width=6.5}
+
+# PLOT UNCERTAINTY -------------------------------------------------------------
 
 # Continental level
 a <- AB.dt %>%
@@ -1458,9 +1489,13 @@ a <- AB.dt %>%
             color = "black",
             alpha = 0.7,
             inherit.aes = FALSE) +
+  scale_fill_discrete(guide = FALSE) +
   geom_histogram() +
-  scale_fill_discrete(name = "Cropland in 2050",
-                      labels = c("Gross", "Net")) +
+  geom_vline(data = irrigated_area_2050_dt,
+             aes(xintercept = value,
+                 colour = Study),
+             lty = 2,
+             size = 1) +
   labs(x = "Area irrigated 2050 (Mha)",
        y = "Counts") +
   facet_wrap(~Continent,
@@ -1469,16 +1504,13 @@ a <- AB.dt %>%
   scale_x_log10(labels = trans_format("log10", math_format(10^.x))) +
   scale_y_continuous(breaks = pretty_breaks(n = 2)) +
   theme_bw() +
-  theme(legend.position = "none",
+  theme(legend.position = "none", 
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         legend.background = element_rect(fill = "transparent",
                                          color = NA),
         legend.key = element_rect(fill = "transparent",
-                                  color = NA),
-        plot.margin = margin(r = -1.5,
-                             unit = "cm"))
-
+                                  color = NA)) 
 
 # Global level
 b <- global.uncertainty %>%
@@ -1511,28 +1543,52 @@ b <- global.uncertainty %>%
                 # Limit the x axis for better visualization
                 limits = c(200, 4300)) +
   theme_bw() +
-  theme(legend.position = c(0.7, 0.7),
+  theme(legend.position = "none",
         panel.grid.major = element_blank(),
-        plot.margin = margin(l = -1.5,
-                             unit = "cm"),
         panel.grid.minor = element_blank(),
         legend.background = element_rect(fill = "transparent",
                                          color = "white"),
         legend.key = element_rect(fill = "transparent",
                                   color = NA))
 
-# Merge
-plot_grid(a, b, 
-          ncol = 2, 
-          labels = "AUTO",
-          align = "hv", 
-          rel_widths = c(2, 1.7))
+legend <- get_legend(a + theme(legend.position = "top") +
+                       guides(colour = guide_legend(nrow = 3,
+                                                    byrow = TRUE)))
+
+bottom <- plot_grid(a, b,
+                    ncol = 2,
+                    labels = "AUTO",
+                    align = "hv")
+
+plot_grid(legend, bottom,
+          labels = c("", ""),
+          ncol = 1,
+          align = "",
+          rel_heights = c(0.3, 1))
 ```
+
+```{r extra_plot, cache=TRUE, dependson=c("global_uncertainty", "quantiles", "arrange_output", "read_projections"), dev="tikz", fig.height=6.8, fig.width=4.3}
+
+
+bottom <- plot_grid(a + labs(x = "", y = "Counts"), 
+                    b + labs(x = "Area irrigated 2050 (Mha)", y = "Counts"), 
+                    ncol = 1, 
+                    labels = "AUTO", 
+                    align = "hv", 
+                    rel_heights = c(1, 0.53))
+
+plot_grid(legend, bottom,
+          labels = c("", ""),
+          ncol = 1,
+          align = "",
+          rel_heights = c(0.2, 1))
+
+```
+
 
 ```{r global_only, cache=TRUE, dependson="plot_uncertainty", dev="tikz", fig.height=2.5, fig.width=3.3}
 
-b +
-  theme(plot.margin = margin(l = 0, unit = "cm"))
+b +theme(plot.margin = margin(l = 0, unit = "cm"))
 ```
 
 
@@ -1599,7 +1655,7 @@ tmp2 <- gather(tmp, Parameters, Values, X1:eta) %>%
   split(., .$Continent) 
 ```
 
-```{r plot_scatterplots, cache=TRUE, dependson="sensitivity_scatterplots", fig.height=8.4, fig.width=5.4}
+```{r plot_scatterplots, cache=TRUE, dependson="sensitivity_scatterplots", fig.height=8.5, fig.width=4.7}
 
 # PLOT SCATTERPLOTS OF PARAMETERS VS MODEL OUTPUT ----------------------------
 
@@ -1617,8 +1673,14 @@ for(i in names(tmp2)) {
                scales = "free_x",
                ncol = 3, 
                labeller = label_parsed) +
-    theme_AP() +
-    theme(legend.position = "top") +
+    theme_bw() +
+    theme(panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank(), 
+          legend.background = element_rect(fill = "transparent", 
+                                           color = NA), 
+          legend.key = element_rect(fill = "transparent", 
+                                    color = NA), 
+          legend.position = "top") +
     ggtitle(names(tmp2[i]))
 }
 
@@ -2058,14 +2120,14 @@ cluster <- c("Irrigation", "Population", "Model")
 # COMPUTE SOBOL' INDICES ------------------------------------------------------
 
 # Compute Sobol' indices
-out <- full.dt[, sobol_indices(Y, 
-                                params = c(parameters.renamed, cluster), 
-                                type = "saltelli", 
-                                R = R, 
-                                n = n, 
-                                parallel = "multicore", 
-                                ncpus = floor(detectCores() * 0.75)), 
-                by = Continent]
+out <- full.dt[, sobol_indices(Y,
+                               params = c(parameters.renamed, cluster),
+                               type = "saltelli",
+                               R = R,
+                               n = n,
+                               parallel = "multicore",
+                               ncpus = floor(detectCores() * 0.75)),
+               by = Continent]
 ```
 
 ```{r sobol_ci, cache=TRUE, dependson=c("sobol_indices", "sobol_settings", "sobol_functions")}
@@ -2074,12 +2136,11 @@ out <- full.dt[, sobol_indices(Y,
 
 # Compute confidence intervals
 tmp <- split(out, out$Continent)
-  
 out.ci <- list()
 for(i in names(tmp)) {
-  out.ci[[i]] <- sobol_ci(tmp[[i]], 
-                          params = c(parameters.renamed, cluster), 
-                          type = type, 
+  out.ci[[i]] <- sobol_ci(tmp[[i]],
+                          params = c(parameters.renamed, cluster),
+                          type = type,
                           conf = conf)
 }
 ```
@@ -2090,24 +2151,22 @@ for(i in names(tmp)) {
 
 # For the model parameters
 out.dummy <- full.dt[, .SD[1:(n * (k + 2))], Continent] %>%
-  .[, sobol_dummy(Y, 
-                  params = parameters.renamed, 
-                  R = R, 
-                  n = n, 
-                  parallel = "multicore", 
-                  ncpus = floor(detectCores() * 0.5)), 
+  .[, sobol_dummy(Y,
+                  params = parameters.renamed,
+                  R = R,
+                  n = n,
+                  parallel = "multicore",
+                  ncpus = floor(detectCores() * 0.5)),
     by = Continent]
 
-# Compute confidence intervals 
+# Compute confidence intervals
 tmp.dummy <- split(out.dummy, out.dummy$Continent)
-
 out.dummy.ci <- list()
 for(i in names(tmp.dummy)) {
-  out.dummy.ci[[i]] <- sobol_ci_dummy(tmp.dummy[[i]], 
-                                      type = type, 
+  out.dummy.ci[[i]] <- sobol_ci_dummy(tmp.dummy[[i]],
+                                      type = type,
                                       conf = conf)
 }
-
 out.dummy.ci2 <- rbindlist(out.dummy.ci, idcol = "Continent")
 
 # For the clusters of parameters
@@ -2120,23 +2179,21 @@ tmp2 <- full.dt[full.dt[, tail(.I, length(cluster) * n), by = Continent]$V1, ] %
 for(i in names(tmp1)) {
   tmp1[[i]] <- rbind(tmp1[[i]], tmp2[[i]])
 }
-
 out.dummy.cluster <- rbindlist(tmp1) %>%
-  .[, sobol_dummy(Y, 
-                  params = cluster, 
-                  R = R, 
-                  n = n, 
-                  parallel = "multicore", 
-                  ncpus = floor(detectCores() * 0.5)), 
+  .[, sobol_dummy(Y,
+                  params = cluster,
+                  R = R,
+                  n = n,
+                  parallel = "multicore",
+                  ncpus = floor(detectCores() * 0.5)),
     by = Continent]
 
-# Compute confidence intervals 
+# Compute confidence intervals
 tmp.dummy <- split(out.dummy.cluster, out.dummy.cluster$Continent)
-
 out.dummy.cluster.ci <- list()
 for(i in names(tmp.dummy)) {
-  out.dummy.cluster.ci[[i]] <- sobol_ci_dummy(tmp.dummy[[i]], 
-                                              type = type, 
+  out.dummy.cluster.ci[[i]] <- sobol_ci_dummy(tmp.dummy[[i]],
+                                              type = type,
                                               conf = conf)
 }
 
@@ -2160,12 +2217,15 @@ a <- rbindlist(out.ci, idcol = "Continent") %>%
   .[!parameters %in% cluster] %>%
   plot_sobol(., type = 1, dummy = out.dummy.ci2) + 
   scale_y_continuous(breaks = pretty_breaks(n = 3)) +
-  facet_wrap(~Continent, ncol = 1) 
+  facet_wrap(~Continent, ncol = 1) +
+  labs(y = "Sobol' indices", 
+       x = "" )
 
 # Plot Sobol' indices of clusters of parameters
 b <- rbindlist(out.ci, idcol = "Continent") %>%
   .[parameters %in% cluster] %>%
   plot_sobol(., type = 1, dummy = out.dummy.cluster.ci2) + 
+  scale_y_continuous(breaks = pretty_breaks(n = 3)) +
   facet_wrap(~Continent, ncol = 1) +
   labs(x = "", 
        y = "")
@@ -2183,7 +2243,7 @@ legend <- get_legend(a + theme(legend.direction = "horizontal",
                                legend.box.just = "top"))
 ```
 
-```{r plot_sobol, cache=TRUE, dependson="prepare_plot_sobol", dev="tikz", fig.height=5, fig.width=6.2}
+```{r plot_sobol, cache=TRUE, dependson="prepare_plot_sobol", dev="tikz", fig.height=5.3, fig.width=6.2}
 
 # PLOT SOBOL' INDICES ----------------------------------------------------------
 
@@ -2193,6 +2253,24 @@ plot_grid(legend,
           ncol = 1, 
           rel_heights = c(0.15, 1))
 ```
+
+```{r prepare_plot_sobol2, cache=TRUE, dependson=c("sobol_ci_dummy", "sobol_ci", "sobol_settings", "sobol_functions"), dev="tikz", fig.height=5, fig.width=5.2}
+
+# Merge both plots
+bottom <- plot_grid(a + theme(legend.position="none", 
+                              axis.text.x = element_text(size = 7.2)), 
+                    b + theme(legend.position="none", 
+                              axis.text.x = element_text(size = 7.2)), 
+                    ncol = 2, 
+                    labels = "AUTO", 
+                    rel_widths = c(2, 1.1))
+
+plot_grid(legend, 
+          bottom, 
+          ncol = 1, 
+          rel_heights = c(0.15, 1))
+```
+
 
 ```{r check_sum_si, cache=TRUE, dependson="export_sobol_indices"} 
 
