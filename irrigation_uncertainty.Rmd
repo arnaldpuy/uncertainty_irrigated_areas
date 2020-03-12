@@ -1,5 +1,5 @@
 ---
-title: "The future environmental impact of irrigated agriculture is grossly underestimated"
+title: "Current models severely underestimate future irrigated areas"
 author: "Arnald Puy, Samuele Lo Piano and Andrea Saltelli"
 header-includes:
   - \usepackage[font=footnotesize]{caption}
