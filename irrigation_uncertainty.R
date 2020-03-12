@@ -1351,7 +1351,14 @@ print(quant)
 
 projections <- df$projections %>%
   select(Study, `2050`, Group) %>%
-  na.omit()
+  na.omit() %>%
+  data.table()
+
+projections <- rbind(projections, 
+                     data.table(Study = "Rosegrant.et.al.2002", `2050` = 237, Group = 11)) %>%
+  setnames(., "2050", "projection")
+
+
 
 # Assess uncertainty at the global level
 global.uncertainty <- AB.dt %>%
@@ -1448,6 +1455,9 @@ a <- AB.dt %>%
         legend.key = element_rect(fill = "transparent",
                                   color = NA)) 
 
+cropland.1[, .(maximum = sum(max), 
+               minimum = sum(min)), Estimation]
+
 # Global level
 b <- global.uncertainty %>%
   ggplot(., aes(Total)) +
@@ -1460,8 +1470,18 @@ b <- global.uncertainty %>%
             color = "darkgreen",
             alpha = 0.1,
             inherit.aes = FALSE) +
+  geom_rect(data = cropland.1[, .(maximum = sum(max), 
+                                  minimum = sum(min)), Estimation],
+            aes(xmin = minimum,
+                xmax = maximum,
+                ymin = -Inf,
+                ymax = Inf,
+                fill = Estimation),
+            color = "black",
+            alpha = 0.7,
+            inherit.aes = FALSE) +
   geom_histogram() +
-  geom_vline(data = projections,
+  geom_vline(data = projections[!Study == "Alcamo.et.al.2005"],
              aes(xintercept = `2050`,
                  colour = Study),
              lty = 2,
@@ -1479,7 +1499,7 @@ b <- global.uncertainty %>%
                 # Limit the x axis for better visualization
                 limits = c(200, 4300)) +
   theme_bw() +
-  theme(legend.position = "none",
+  theme(legend.position = c(0.6, 0.6),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         legend.background = element_rect(fill = "transparent",
@@ -1506,12 +1526,12 @@ plot_grid(legend, bottom,
 ## ----extra_plot, cache=TRUE, dependson=c("global_uncertainty", "quantiles", "arrange_output", "read_projections"), dev="tikz", fig.height=6.8, fig.width=4.3----
 
 
-bottom <- plot_grid(a + labs(x = "", y = "Counts"), 
-                    b + labs(x = "Area irrigated 2050 (Mha)", y = "Counts"), 
-                    ncol = 1, 
-                    labels = "AUTO", 
-                    align = "hv", 
-                    rel_heights = c(1, 0.53))
+plot_grid(a + labs(x = "", y = "Counts"), 
+          b + labs(x = "Area irrigated 2050 (Mha)", y = "Counts"), 
+          ncol = 1, 
+          labels = "AUTO", 
+          align = "hv", 
+          rel_heights = c(1, 0.53))
 
 plot_grid(legend, bottom,
           labels = c("", ""),
@@ -2159,7 +2179,7 @@ b <- rbindlist(out.ci, idcol = "Continent") %>%
        y = "")
 
 # Merge both plots
-bottom <- plot_grid(a + theme(legend.position="none"), 
+plot_grid(a + theme(legend.position = c(0.27, 0.95), legend.direction = "horizontal"), 
                     b + theme(legend.position="none"), 
                     ncol = 2, 
                     labels = "AUTO", 
@@ -2214,4 +2234,8 @@ sobol.ci[parameters %in% c("Irrigation", "Population", "Model")] %>%
 
 sessionInfo()
 
+
+
+cropland.1[, .(maximum = sum(max), 
+               minimum = sum(min)), Estimation]
 
