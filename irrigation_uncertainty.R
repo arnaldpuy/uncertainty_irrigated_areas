@@ -1432,7 +1432,8 @@ a <- AB.dt %>%
             color = "black",
             alpha = 0.7,
             inherit.aes = FALSE) +
-  scale_fill_discrete(guide = FALSE) +
+  scale_fill_manual(guide = FALSE, 
+                      values = c("chocolate4", "chocolate1")) +
   geom_histogram() +
   geom_vline(data = irrigated_area_2050_dt,
              aes(xintercept = value,
@@ -1480,9 +1481,10 @@ b <- global.uncertainty %>%
             color = "black",
             alpha = 0.7,
             inherit.aes = FALSE) +
+  scale_fill_discrete(guide = FALSE) +
   geom_histogram() +
   geom_vline(data = projections[!Study == "Alcamo.et.al.2005"],
-             aes(xintercept = `2050`,
+             aes(xintercept = projection,
                  colour = Study),
              lty = 2,
              size = 1) +
@@ -2234,7 +2236,13 @@ sobol.ci[parameters %in% c("Irrigation", "Population", "Model")] %>%
 
 sessionInfo()
 
+cropland.global <- cropland.1[, .(maximum = sum(max), 
+                                  minimum = sum(min)), Estimation]
 
+global.uncertainty[, sum(Total > cropland.global[Estimation == "Net", minimum]) / .N]
+
+sapply(Continents,function(x) 
+  AB.dt[Continent==x, sum(Y>=prove[Continent==x, min]&Y<=prove[Continent==x, max])/.N])
 
 cropland.1[, .(maximum = sum(max), 
                minimum = sum(min)), Estimation]
