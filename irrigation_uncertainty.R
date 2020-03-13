@@ -1,8 +1,8 @@
-## ----setup, include=FALSE--------------------------------------------------------------------
+## ----setup, include=FALSE---------------------------------------------------------
 knitr::opts_chunk$set(echo = TRUE)
 
 
-## ----preliminary steps, results="hide", message=FALSE, warning=FALSE-------------------------
+## ----preliminary steps, results="hide", message=FALSE, warning=FALSE--------------
 
 # PRELIMINARY STEPS ------------------------------------------------------
 
@@ -75,7 +75,7 @@ theme_AP <- function() {
 } 
 
 
-## ----datasets, warning=FALSE, cache=TRUE-----------------------------------------------------
+## ----datasets, warning=FALSE, cache=TRUE------------------------------------------
 
 # PREPARE DATASETS -------------------------------------------------------
 
@@ -222,7 +222,7 @@ df.meier %>%
   theme(legend.position = "top")
 
 
-## ----read_aquastat_dataset, cache=TRUE-------------------------------------------------------
+## ----read_aquastat_dataset, cache=TRUE--------------------------------------------
 
 # READ IN AQUASTAT DATA SET ---------------------------------------------------
 
@@ -244,7 +244,7 @@ aquastat <- aquastat[, (cols):= lapply(.SD, factor), .SDcols = cols] %>%
   .[!c(Year <= 1999 | Year >= 2012)] # Retain only years 1999-2012
 
 
-## ----function_code, cache=TRUE---------------------------------------------------------------
+## ----function_code, cache=TRUE----------------------------------------------------
 
 # FUNCTIONS TO CODE -----------------------------------------------------------
 
@@ -394,7 +394,7 @@ df$meier %>%
         panel.grid.minor = element_blank())
 
 
-## ----plot_country_level, dev="tikz", cache=TRUE, message=FALSE, warning=FALSE----------------
+## ----plot_country_level, dev="tikz", cache=TRUE, message=FALSE, warning=FALSE-----
 
 # DIFFERENCES IN THE MEASUREMENT OF IRRIGATED AREAS
 # AS A FUNCTION OF DATASET (COUNTRY) ---------------------------------------------
@@ -459,7 +459,7 @@ second <- plot_grid(gg[[3]], gg[[4]], ncol = 2)
 plot_grid(legend, second, ncol = 1)
 
 
-## ----out, fig.keep="none", cache=TRUE, dependson="datasets"----------------------------------
+## ----out, fig.keep="none", cache=TRUE, dependson="datasets"-----------------------
 
 # CHECK WHETHER THERE ARE OUTLIERS IN AREA.IRRIGATED VS. POPULATION 
 # AND AREA.IRRIGATED VS WATER REQUIRED FOR IRRIGATION -------------------------
@@ -502,7 +502,7 @@ out.df <- out.n[out.md, on = c("Dataset", "Continent", "Class")] %>%
   .[order(Continent)]
 
 
-## ----outlier_export, dependson="out", cache=TRUE---------------------------------------------
+## ----outlier_export, dependson="out", cache=TRUE----------------------------------
 
 # EXPORT OUTLIERS DATASET ------------------------------------------------
 
@@ -547,7 +547,7 @@ plot(gg[["Population"]])
 plot(gg[["Water"]])
 
 
-## ----irrigated_area_baseline, dependson="datasets", cache=TRUE-------------------------------
+## ----irrigated_area_baseline, dependson="datasets", cache=TRUE--------------------
 
 # CALCULATE FOR EACH CONTINENT THE MAXIMUM AND MINIMUM
 # EXTENSION OF IRRIGATED AREAS -------------------------------------------
@@ -564,7 +564,7 @@ total.area.irrigated <- df$meier %>%
   split(., .$Continent, drop = TRUE)
 
 
-## ----define_bootstrap_replicas, cache=TRUE---------------------------------------------------
+## ----define_bootstrap_replicas, cache=TRUE----------------------------------------
 
 # DEFINE NUMBER OF BOOTSTRAP REPLICAS -----------------------------------------
 
@@ -713,7 +713,7 @@ smaB <- dt.regressions[, list(list(boot(.SD,
                        .(Continent, Dataset)]
 
 
-## ----extract_alpha_beta_robust, cache=TRUE, dependson="sma_regression"-----------------------
+## ----extract_alpha_beta_robust, cache=TRUE, dependson="sma_regression"------------
 
 # EXTRACT ALPHA AND BETA ROBUST SMA -------------------------------------------
 
@@ -736,7 +736,7 @@ sma.robust.pop <- smaB[, "All":= list(lapply(V1, function(x) x["t"]))] %>%
   .[, Robust:= "YES"]
 
 
-## ----export_sma, cache=TRUE, dependson="extract_alpha_beta_robust"---------------------------
+## ----export_sma, cache=TRUE, dependson="extract_alpha_beta_robust"----------------
 
 fwrite(sma.nonrobust.pop, "sma.nonrobust.pop.csv")
 fwrite(sma.robust.pop, "sma.robust.pop.csv")
@@ -759,7 +759,7 @@ boot.samples.water <- rbind(ols.nonrobust.water,
   .[order(Continent, Dataset)]
 
 
-## ----export_bootstrap_samples2, cache=TRUE, dependson="dt_bootstrap_samples"-----------------
+## ----export_bootstrap_samples2, cache=TRUE, dependson="dt_bootstrap_samples"------
 
 # EXPORT BOOTSTRAP SAMPLES ----------------------------------------------------
 
@@ -767,7 +767,7 @@ fwrite(boot.samples.pop, "boot.samples.pop.csv")
 fwrite(boot.samples.water, "boot.samples.water.csv")
 
 
-## ----predict_epsilon, cache=TRUE, dependson="dt_bootstrap_samples"---------------------------
+## ----predict_epsilon, cache=TRUE, dependson="dt_bootstrap_samples"----------------
 
 # PREDICT ALPHA FROM BETA ------------------------------------------------
 
@@ -783,7 +783,7 @@ Epsilon <- summary(summary.beta.alpha)$sigma %>%
   .^2
 
 
-## ----lookup_tables, cache=TRUE, dependson="dt_bootstrap_samples"-----------------------------
+## ----lookup_tables, cache=TRUE, dependson="dt_bootstrap_samples"------------------
 
 # CREATE THE LOOKUP TABLE ------------------------------------------------
 
@@ -814,7 +814,7 @@ fwrite(lookup.pop, "lookup.pop.csv")
 fwrite(lookup.water, "lookup.water.csv")
 
 
-## ----population_baseline, cache=TRUE, dependson="datasets"-----------------------------------
+## ----population_baseline, cache=TRUE, dependson="datasets"------------------------
 
 # CREATE DATA FRAME WITH POPULATION BASELINE VALUES ---------------------------
 
@@ -965,7 +965,7 @@ growth.rate.distr <- list(distr.weib$Africa$estimate,
 names(growth.rate.distr) <- c("Africa", "Asia", "Europe", "Americas")   
 
 
-## ----cropland_available, cache=TRUE, dependson="datasets"------------------------------------
+## ----cropland_available, cache=TRUE, dependson="datasets"-------------------------
 
 # INTEGRATE CROPLAND AVAILABLE WITH MODEL OUTPUT UNCERTAINTY --------------
 
@@ -1015,7 +1015,7 @@ cropland <- cropland.1 %>%
   split(., .$Continent) 
 
 
-## ----water_available, cache=TRUE-------------------------------------------------------------
+## ----water_available, cache=TRUE--------------------------------------------------
 
 # DEFINE DISTRIBUTIONS FOR THE TOTAL WATER AVAILABLE --------------------------
 
@@ -1035,9 +1035,9 @@ water.availability.dt <- water.availability[!Continent == "Oceania"] %>%
   split(., .$Continent)
 
 
-## ----settings_sample_matrix, cache=TRUE, results="hide", message=FALSE-----------------------
+## ----settings_sample_matrix, cache=TRUE, results="hide", message=FALSE------------
 
-# CREATE THE SAMPLE MATRIX ----------------------------------------------------
+# CREATE THE SAMPLE MATRIX -----------------------------------------------------
 
 # Create a vector with the name of the columns
 parameters <- c("X1", "X2", "X3", "X4", "W1", "W3", "W4", "r", 
@@ -1047,7 +1047,7 @@ parameters <- c("X1", "X2", "X3", "X4", "W1", "W3", "W4", "r",
 k <- length(parameters)
 
 # Select sample size
-n <- 2 ^ 13
+n <- 2 ^ 14
 
 # Create vector with the continents
 Continents <- c("Africa", "Americas", "Asia", "Europe")
@@ -1098,7 +1098,7 @@ for(i in names(AB)) {
 }
 
 
-## ----number_boot_replicas, cache=TRUE, dependson="dt_bootstrap_samples"----------------------
+## ----number_boot_replicas, cache=TRUE, dependson="dt_bootstrap_samples"-----------
 
 # CHECK NUMBER OF BOOTSTRAP SAMPLES OF BETA, DELTA, ETC. ----------------------
 
@@ -1234,7 +1234,7 @@ fwrite(final.dt, "final.dt.csv")
 print(final.dt)
 
 
-## ----model, cache=TRUE-----------------------------------------------------------------------
+## ----model, cache=TRUE------------------------------------------------------------
 
 # DEFINE THE MODEL ------------------------------------------------------------
 
@@ -1278,7 +1278,7 @@ model <- function(X) {
 }
 
 
-## ----run_model, cache=TRUE, dependson=c("model", "export.final.dt")--------------------------
+## ----run_model, cache=TRUE, dependson=c("model", "export.final.dt")---------------
 
 # RUN MODEL USING PARALLEL COMPUTING ---------------------------------------
 
@@ -1310,7 +1310,7 @@ full.dt <- cbind(final.dt, data.table(do.call(rbind, Y))) %>%
 AB.dt <- full.dt[, .SD[1:(n * 2)], Continent]
 
 
-## ----export_full_model output, cache=TRUE, dependson="arrange_output"------------------------
+## ----export_full_model output, cache=TRUE, dependson="arrange_output"-------------
 
 # EXPORT MODEL OUTPUT ---------------------------------------------------------
 
@@ -1318,14 +1318,14 @@ fwrite(full.dt, "full.dt.csv")
 
 
 
-## ----export_AB_matrix, cache=TRUE, dependson="arrange_output"--------------------------------
+## ----export_AB_matrix, cache=TRUE, dependson="arrange_output"---------------------
 
 # EXPORT AB MATRICES ----------------------------------------------------------
 
 fwrite(AB.dt, "AB.dt.csv")
 
 
-## ----quantiles, cache=TRUE, dependson="arrange_output"---------------------------------------
+## ----quantiles, cache=TRUE, dependson="arrange_output"----------------------------
 
 # COMPUTE QUANTILES -----------------------------------------------------------
 
@@ -1345,7 +1345,7 @@ quant <- AB.dt[Y > 0] %>%
 print(quant)
 
 
-## ----global_uncertainty, cache=TRUE, dependson="arrange_output"------------------------------
+## ----global_uncertainty, cache=TRUE, dependson="arrange_output"-------------------
 
 # COMPUTE QUANTILES AT THE GLOBAL LEVEL ---------------------------------------
 
@@ -1355,10 +1355,9 @@ projections <- df$projections %>%
   data.table()
 
 projections <- rbind(projections, 
-                     data.table(Study = "Rosegrant.et.al.2002", `2050` = 237, Group = 11)) %>%
-  setnames(., "2050", "projection")
-
-
+                     data.table(Study = "Rosegrant.et.al.2002", 
+                                `2050` = 237, 
+                                Group = 11)) 
 
 # Assess uncertainty at the global level
 global.uncertainty <- AB.dt %>%
@@ -1380,7 +1379,7 @@ global.quantile <- quantile(global.uncertainty$Total,
 print(global.quantile)
 
 
-## ----read_projections------------------------------------------------------------------------
+## ----read_projections-------------------------------------------------------------
 
 # READ PROJECTIONS OF IRRIGATED AREAS AT THE CONTINENTAL LEVEL ------------------
 
@@ -1419,7 +1418,7 @@ a <- AB.dt %>%
                 ymax = Inf,
                 group = Continent),
             fill = "green",
-            color = "darkgreen",
+            color = "white",
             alpha = 0.1,
             inherit.aes = FALSE) +
   geom_rect(data = cropland.1,
@@ -1445,7 +1444,7 @@ a <- AB.dt %>%
   facet_wrap(~Continent,
              ncol = 1,
              scales = "free_y") +
-  scale_x_log10(labels = trans_format("log10", math_format(10^.x))) +
+  scale_x_log10() +
   scale_y_continuous(breaks = pretty_breaks(n = 2)) +
   theme_bw() +
   theme(legend.position = "none", 
@@ -1456,9 +1455,7 @@ a <- AB.dt %>%
         legend.key = element_rect(fill = "transparent",
                                   color = NA)) 
 
-cropland.1[, .(maximum = sum(max), 
-               minimum = sum(min)), Estimation]
-
+# Global level
 # Global level
 b <- global.uncertainty %>%
   ggplot(., aes(Total)) +
@@ -1468,7 +1465,7 @@ b <- global.uncertainty %>%
                 ymin = -Inf,
                 ymax = Inf),
             fill = "green",
-            color = "darkgreen",
+            color = "white",
             alpha = 0.1,
             inherit.aes = FALSE) +
   geom_rect(data = cropland.1[, .(maximum = sum(max), 
@@ -1481,51 +1478,34 @@ b <- global.uncertainty %>%
             color = "black",
             alpha = 0.7,
             inherit.aes = FALSE) +
-  scale_fill_discrete(guide = FALSE) +
+  scale_fill_manual(guide = FALSE, 
+                      values = c("chocolate4", "chocolate1")) +
   geom_histogram() +
   geom_vline(data = projections[!Study == "Alcamo.et.al.2005"],
-             aes(xintercept = projection,
+             aes(xintercept = `2050`,
                  colour = Study),
              lty = 2,
              size = 1) +
   scale_color_discrete(labels = c("Alcamo et al. 2005",
-                                  "Alcamo et al. 2007",
                                   "Alexandratos and \n Bruinsma 2012",
                                   "Fischer et al. 2007",
-                                  "Molden 2007")) +
+                                  "Molden 2007",
+                                  "Rosegrant et al. 2002")) +
   labs(x = "Area irrigated 2050 (Mha)",
        y = "",
        color = "Projection") +
-  scale_x_log10(labels = trans_format("log10", math_format(10^.x)),
-                breaks = trans_breaks("log10", function(x) 10^x),
-                # Limit the x axis for better visualization
+  scale_x_log10(# Limit the x axis for better visualization
                 limits = c(200, 4300)) +
   theme_bw() +
-  theme(legend.position = c(0.6, 0.6),
+  theme(legend.position = c(0.82, 0.58),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
-        legend.background = element_rect(fill = "transparent",
-                                         color = "white"),
+        legend.background = element_rect(fill = alpha("white", 0.7)),
         legend.key = element_rect(fill = "transparent",
                                   color = NA))
 
-legend <- get_legend(a + theme(legend.position = "top") +
-                       guides(colour = guide_legend(nrow = 3,
-                                                    byrow = TRUE)))
 
-bottom <- plot_grid(a, b,
-                    ncol = 2,
-                    labels = "AUTO",
-                    align = "hv")
-
-plot_grid(legend, bottom,
-          labels = c("", ""),
-          ncol = 1,
-          align = "",
-          rel_heights = c(0.3, 1))
-
-
-## ----extra_plot, cache=TRUE, dependson=c("global_uncertainty", "quantiles", "arrange_output", "read_projections"), dev="tikz", fig.height=6.8, fig.width=4.3----
+## ----extra_plot, cache=TRUE, dependson=c("global_uncertainty", "quantiles", "arrange_output", "read_projections", "plot_uncertainty_final"), dev="tikz", fig.height=6.8, fig.width=4.7----
 
 
 plot_grid(a + labs(x = "", y = "Counts"), 
@@ -1533,22 +1513,16 @@ plot_grid(a + labs(x = "", y = "Counts"),
           ncol = 1, 
           labels = "AUTO", 
           align = "hv", 
-          rel_heights = c(1, 0.53))
-
-plot_grid(legend, bottom,
-          labels = c("", ""),
-          ncol = 1,
-          align = "",
-          rel_heights = c(0.2, 1))
+          rel_heights = c(1, 0.6))
 
 
 
-## ----global_only, cache=TRUE, dependson="plot_uncertainty", dev="tikz", fig.height=2.5, fig.width=3.3----
+## ----global_only, cache=TRUE, dependson=c("plot_uncertainty", "extra_plot"), dev="tikz", fig.height=2.5, fig.width=4.7----
 
-b +theme(plot.margin = margin(l = 0, unit = "cm"))
+b + theme(plot.margin = margin(l = 0, unit = "cm"))
 
 
-## ----export_global, cache=TRUE, dependson="global_uncertainty"-------------------------------
+## ----export_global, cache=TRUE, dependson="global_uncertainty"--------------------
 
 # EXPORT GLOBAL UNCERTAINTY ---------------------------------------------------
 
@@ -1569,10 +1543,11 @@ global.uncertainty[, .(N = .N,
                        larger.Molden = sum((Total > 450) / .N) * 100,
                        much.larger.Molden = sum((Total > 675) / .N) * 100,
                        twice.Molden = sum((Total > 900) / .N) * 100,
+                       three.Molden = sum((Total > 450 * 3) / .N) * 100,
                        less.100 = sum((Total < 10^2) / .N) * 100)] 
 
 
-## ----sensitivity_scatterplots, cache=TRUE, dependson="arrange_output"------------------------
+## ----sensitivity_scatterplots, cache=TRUE, dependson="arrange_output"-------------
 
 # ARRANGE SCATTERPLOTS OF PARAMETERS VS MODEL OUTPUT --------------------------
 
@@ -1642,7 +1617,7 @@ gg[[3]]
 gg[[4]]
 
 
-## ----sobol_functions, cache=TRUE, echo=FALSE-------------------------------------------------
+## ----sobol_functions, cache=TRUE, echo=FALSE--------------------------------------
 
 # FUNCTION TO COMPUTE SOBOL' FIRST AND TOTAL-ORDER EFFECTS USING
 # THE JANSEN 1999 ESTIMATOR FOR FIRST AND TOTAL INDICES -----------------------
@@ -2048,7 +2023,7 @@ sobol_indices <- function(Y, params, type = "jansen",
 }
 
 
-## ----sobol_settings, cache=TRUE, dependson="arrange_output"----------------------------------
+## ----sobol_settings, cache=TRUE, dependson="arrange_output"-----------------------
 
 # SETTING FOR SOBOL' INDICES --------------------------------------------------
 
@@ -2180,28 +2155,18 @@ b <- rbindlist(out.ci, idcol = "Continent") %>%
   labs(x = "", 
        y = "")
 
-# Merge both plots
-plot_grid(a + theme(legend.position = c(0.27, 0.95), legend.direction = "horizontal"), 
-                    b + theme(legend.position="none"), 
-                    ncol = 2, 
-                    labels = "AUTO", 
-                    rel_widths = c(2, 1.1))
-
-# Extract legend
-legend <- get_legend(a + theme(legend.direction = "horizontal",
-                               legend.justification="center" ,
-                               legend.box.just = "top"))
-
 
 ## ----plot_sobol, cache=TRUE, dependson="prepare_plot_sobol", dev="tikz", fig.height=5.3, fig.width=6.2----
 
 # PLOT SOBOL' INDICES ----------------------------------------------------------
 
 # Merge legend and a and b
-plot_grid(legend, 
-          bottom, 
-          ncol = 1, 
-          rel_heights = c(0.15, 1))
+plot_grid(a + theme(legend.position = c(0.4, 0.95), 
+                    legend.direction = "horizontal"), 
+                    b + theme(legend.position="none"), 
+                    ncol = 2, 
+                    labels = "AUTO", 
+                    rel_widths = c(2, 1.1))
 
 
 ## ----prepare_plot_sobol2, cache=TRUE, dependson=c("sobol_ci_dummy", "sobol_ci", "sobol_settings", "sobol_functions"), dev="tikz", fig.height=5, fig.width=5.2----
@@ -2221,7 +2186,7 @@ plot_grid(legend,
           rel_heights = c(0.15, 1))
 
 
-## ----check_sum_si, cache=TRUE, dependson="export_sobol_indices"------------------------------
+## ----check_sum_si, cache=TRUE, dependson="export_sobol_indices"-------------------
 
 # CHECK SUM OF SI INDICES -----------------------------------------------------
 
@@ -2230,20 +2195,130 @@ sobol.ci[parameters %in% c("Irrigation", "Population", "Model")] %>%
   .[, sum(original),  Continent]
 
 
-## ----session_information---------------------------------------------------------------------
+## ----pop_model, cache=TRUE--------------------------------------------------------
+
+# CREATE POPULATION MODEL -----------------------------------------------------
+
+population_fun <- function(N0, r, t, gamma) {
+  N <- N0
+  for(i in 1: (t-1)) {
+    N[i+1] <- N[i] + r * N[i] ^ gamma
+  }
+  return(N[length(N)])
+}
+
+
+## ----run_pop_model, cache=TRUE, dependson=c("arrange_output", "pop_model")--------
+
+# RUN POPULATION MODEL --------------------------------------------------------
+
+AB.dt2 <- AB.dt[, N50:= population_fun(N0 = N, r = r, t = t, gamma = gamma ), 
+      seq_len(nrow(AB.dt))]
+
+
+## ----arrange_pop_data, cache=TRUE, dependson=c("preliminary steps", "arrange_output", "global_uncertainty")----
+
+# ARRANGE DATA ----------------------------------------------------------------
+
+projections_N <- fread("projections_N.csv")
+
+# Change level of factors
+projections_N[, Estimate:= factor(Estimate, levels = c("Low", "Medium", "High"))]
+
+# Assess uncertainty at the global level
+global.population <- AB.dt2 %>%
+  .[, .(Continent, Y, N50)] %>%
+  split(., .$Continent) %>%
+  lapply(., function(x) x[, N50]) %>%
+  do.call("cbind", .) %>%
+  data.table() %>%
+  .[, Total_N50:= rowSums(.)]
+
+# Bind
+dt.total <- data.table(cbind(global.uncertainty$Total, global.population$Total_N50)) %>%
+  setnames(c("V1", "V2"), c("Total.irrigation", "Total.population"))
+
+
+## ----plot_pop_plots, cache=TRUE, dependson="arrange_pop_data"---------------------
+
+# PLOT POPULATION AND IRRIGATED AREAS SCATTERPLOTS ----------------------------
+
+a <- ggplot(AB.dt2, aes(N50, Y)) +
+  geom_point(alpha = 0.05, size = 0.1) + 
+  geom_vline(data = projections_N,
+             aes(xintercept = N,
+                 colour = Estimate),
+             lty = 2,
+             size = 1) + 
+  geom_rect(data = quant,
+            aes(xmin = -Inf,
+                xmax = Inf,
+                ymin = X2.5.,
+                ymax = X97.5.,
+                group = Continent),
+            fill = "green",
+            color = "darkgreen",
+            alpha = 0.1,
+            inherit.aes = FALSE) +
+  facet_wrap(~Continent, 
+             scales = "free") + 
+  scale_color_manual(values = c("green", "orange", "red")) +
+  labs(x = "", 
+       y = "Area irrigated (Mha)") +
+  theme_bw() +
+  theme(legend.position = "none",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.background = element_rect(fill = "transparent",
+                                         color = "white"),
+        legend.key = element_rect(fill = "transparent",
+                                  color = NA))
+
+b <- ggplot(dt.total, aes(Total.population, Total.irrigation)) +
+  geom_point(alpha = 0.05, size = 0.1) +
+  geom_vline(data = projections_N[, sum(N), Estimate],
+             aes(xintercept = V1,
+                 colour = Estimate),
+             lty = 2,
+             size = 1) +
+  geom_rect(data = global.quantile,
+            aes(ymin = X2.5.,
+                ymax = X97.5.,
+                xmin = -Inf,
+                xmax = Inf),
+            fill = "green",
+            color = "darkgreen",
+            alpha = 0.1,
+            inherit.aes = FALSE) +
+  scale_color_manual(values = c("green", "orange", "red")) +
+  labs(x = "Population (Mha)", 
+       y = "Area irrigated (Mha)") +
+  theme_bw() +
+  theme(legend.position = "none",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.background = element_rect(fill = "transparent",
+                                         color = "white"),
+        legend.key = element_rect(fill = "transparent",
+                                  color = NA))
+
+# Extract legend
+legend <- get_legend(a + theme(legend.position = "top"))
+
+bottom <- plot_grid(a, b, ncol = 1, labels = "auto")
+
+
+## ----plot_pop_plots_final, cache=TRUE, dependson="plot_pop_plots", fig.height=8, fig.width=6----
+
+# PLOT FINAL ------------------------------------------------------------------
+
+plot_grid(legend, bottom, rel_heights = c(0.1, 1), ncol = 1)
+
+
+## ----session_information----------------------------------------------------------
 
 # SESSION INFORMATION ---------------------------------------------------------
 
 sessionInfo()
 
-cropland.global <- cropland.1[, .(maximum = sum(max), 
-                                  minimum = sum(min)), Estimation]
-
-global.uncertainty[, sum(Total > cropland.global[Estimation == "Net", minimum]) / .N]
-
-sapply(Continents,function(x) 
-  AB.dt[Continent==x, sum(Y>=prove[Continent==x, min]&Y<=prove[Continent==x, max])/.N])
-
-cropland.1[, .(maximum = sum(max), 
-               minimum = sum(min)), Estimation]
 

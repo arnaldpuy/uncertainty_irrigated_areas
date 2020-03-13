@@ -1097,7 +1097,7 @@ water.availability.dt <- water.availability[!Continent == "Oceania"] %>%
 
 ```{r settings_sample_matrix, cache=TRUE, results="hide", message=FALSE}
 
-# CREATE THE SAMPLE MATRIX ----------------------------------------------------
+# CREATE THE SAMPLE MATRIX -----------------------------------------------------
 
 # Create a vector with the name of the columns
 parameters <- c("X1", "X2", "X3", "X4", "W1", "W3", "W4", "r", 
@@ -2267,6 +2267,130 @@ sobol.ci[parameters %in% c("Irrigation", "Population", "Model")] %>%
   .[sensitivity == "Si"] %>%
   .[, sum(original),  Continent]
 ```
+
+# Appendix: relation between projections of irrigated areas and population
+
+```{r pop_model, cache=TRUE}
+
+# CREATE POPULATION MODEL -----------------------------------------------------
+
+population_fun <- function(N0, r, t, gamma) {
+  N <- N0
+  for(i in 1: (t-1)) {
+    N[i+1] <- N[i] + r * N[i] ^ gamma
+  }
+  return(N[length(N)])
+}
+```
+
+```{r run_pop_model, cache=TRUE, dependson=c("arrange_output", "pop_model")}
+
+# RUN POPULATION MODEL --------------------------------------------------------
+
+AB.dt2 <- AB.dt[, N50:= population_fun(N0 = N, r = r, t = t, gamma = gamma ), 
+      seq_len(nrow(AB.dt))]
+```
+
+```{r arrange_pop_data, cache=TRUE, dependson=c("preliminary steps", "arrange_output", "global_uncertainty")}
+
+# ARRANGE DATA ----------------------------------------------------------------
+
+projections_N <- fread("projections_N.csv")
+
+# Change level of factors
+projections_N[, Estimate:= factor(Estimate, levels = c("Low", "Medium", "High"))]
+
+# Assess uncertainty at the global level
+global.population <- AB.dt2 %>%
+  .[, .(Continent, Y, N50)] %>%
+  split(., .$Continent) %>%
+  lapply(., function(x) x[, N50]) %>%
+  do.call("cbind", .) %>%
+  data.table() %>%
+  .[, Total_N50:= rowSums(.)]
+
+# Bind
+dt.total <- data.table(cbind(global.uncertainty$Total, global.population$Total_N50)) %>%
+  setnames(c("V1", "V2"), c("Total.irrigation", "Total.population"))
+```
+
+
+```{r plot_pop_plots, cache=TRUE, dependson="arrange_pop_data"}
+
+# PLOT POPULATION AND IRRIGATED AREAS SCATTERPLOTS ----------------------------
+
+a <- ggplot(AB.dt2, aes(N50, Y)) +
+  geom_point(alpha = 0.05, size = 0.1) + 
+  geom_vline(data = projections_N,
+             aes(xintercept = N,
+                 colour = Estimate),
+             lty = 2,
+             size = 1) + 
+  geom_rect(data = quant,
+            aes(xmin = -Inf,
+                xmax = Inf,
+                ymin = X2.5.,
+                ymax = X97.5.,
+                group = Continent),
+            fill = "green",
+            color = "darkgreen",
+            alpha = 0.1,
+            inherit.aes = FALSE) +
+  facet_wrap(~Continent, 
+             scales = "free") + 
+  scale_color_manual(values = c("green", "orange", "red")) +
+  labs(x = "", 
+       y = "Area irrigated (Mha)") +
+  theme_bw() +
+  theme(legend.position = "none",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.background = element_rect(fill = "transparent",
+                                         color = "white"),
+        legend.key = element_rect(fill = "transparent",
+                                  color = NA))
+
+b <- ggplot(dt.total, aes(Total.population, Total.irrigation)) +
+  geom_point(alpha = 0.05, size = 0.1) +
+  geom_vline(data = projections_N[, sum(N), Estimate],
+             aes(xintercept = V1,
+                 colour = Estimate),
+             lty = 2,
+             size = 1) +
+  geom_rect(data = global.quantile,
+            aes(ymin = X2.5.,
+                ymax = X97.5.,
+                xmin = -Inf,
+                xmax = Inf),
+            fill = "green",
+            color = "darkgreen",
+            alpha = 0.1,
+            inherit.aes = FALSE) +
+  scale_color_manual(values = c("green", "orange", "red")) +
+  labs(x = "Population (Mha)", 
+       y = "Area irrigated (Mha)") +
+  theme_bw() +
+  theme(legend.position = "none",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        legend.background = element_rect(fill = "transparent",
+                                         color = "white"),
+        legend.key = element_rect(fill = "transparent",
+                                  color = NA))
+
+# Extract legend
+legend <- get_legend(a + theme(legend.position = "top"))
+
+bottom <- plot_grid(a, b, ncol = 1, labels = "auto")
+```
+
+```{r plot_pop_plots_final, cache=TRUE, dependson="plot_pop_plots", fig.height=8.5, fig.width=6}
+
+# PLOT FINAL ------------------------------------------------------------------
+
+plot_grid(legend, bottom, rel_heights = c(0.15, 1), ncol = 1)
+```
+
 
 # Session information
 
