@@ -56,7 +56,7 @@ loadPackages(c("data.table", "fitdistrplus", "fGarch", "readxl", "countrycode",
                "scales", "tidyverse", "cowplot", "mvoutlier", "complmrob",
                "randtoolbox","robustbase", "parallel", "smatr", "boot", 
                "doParallel", "sensitivity", "wesanderson", 
-               "grid", "gridExtra", "NbClust"))
+               "grid", "gridExtra", "NbClust", "benchmarkme"))
 
 # install and load sensobol 0.2.1
 PackageURL <- "https://cran.r-project.org/src/contrib/Archive/sensobol/sensobol_0.2.1.tar.gz"
@@ -2426,4 +2426,17 @@ AB.dt2[Y %in% K] %>%
 
 sessionInfo()
 
+## Return the machine CPU
+cat("Machine:     "); print(get_cpu()$model_name)
+
+## Return number of true cores
+cat("Num cores:   "); print(detectCores(logical = FALSE))
+
+## Return number of threads
+cat("Num threads: "); print(detectCores(logical = TRUE))
+
+## Return the machine RAM
+cat("RAM:         "); print (get_ram()); cat("\n")
 ```
+
+# References
