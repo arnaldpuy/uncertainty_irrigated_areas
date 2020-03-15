@@ -568,7 +568,7 @@ total.area.irrigated <- df$meier %>%
 
 # DEFINE NUMBER OF BOOTSTRAP REPLICAS ------------------------------------------
 
-R <- 5000
+R <- 10^4
 
 
 ## ----ols_regressions, dependson=c("datasets", "compute_water_requirements", "define_bootstrap_replicas"), cache=TRUE----
@@ -1047,7 +1047,7 @@ parameters <- c("X1", "X2", "X3", "X4", "W1", "W3", "W4", "r",
 k <- length(parameters)
 
 # Select sample size
-n <- 2 ^ 14
+n <- 2 ^ 15
 
 # Create vector with the continents
 Continents <- c("Africa", "Americas", "Asia", "Europe")
@@ -1108,7 +1108,6 @@ N.boot <- boot.samples.pop[, .(N = .N),
   .[1]
 
 print(N.boot)
-
 
 ## ----transform_sample_matrix, cache=TRUE, dependson=c("sample_matrix_cluster", "water_available", "cropland_available", "population_growth", "population_baseline", "lookup_tables", "settings_sample_matrix")----
 
@@ -1218,13 +1217,11 @@ transform.sobol.continents <- function(AB) {
 
 AB <- transform.sobol.continents(AB)
 
-
 ## ----final.dt, cache=TRUE, dependson=c("sample_matrix_cluster", "water_available", "cropland_available", "population_growth", "population_baseline", "lookup_tables", "settings_sample_matrix", "transform_sample_matrix")----
 
 # WRITE FINAL DATA TABLE -----------------------------------------------------
 
 final.dt <- rbindlist(AB, idcol = "Continent")
-
 
 ## ----export.final.dt, cache=TRUE, dependson=c("sample_matrix_cluster", "water_available", "cropland_available", "population_growth", "population_baseline", "transform_sample_matrix", "lookup_tables", "settings_sample_matrix", "transform_outliers")----
 
@@ -1232,7 +1229,6 @@ final.dt <- rbindlist(AB, idcol = "Continent")
 
 fwrite(final.dt, "final.dt.csv")
 print(final.dt)
-
 
 ## ----model, cache=TRUE-------------------------------------------------------------------------------------
 
@@ -1252,6 +1248,10 @@ model <- function(X) {
   Y <- X[, Y0] + 10 ^ (Intercept + Slope * Beta + X[, epsilon]) * 
   ((N ^ (1- X[, gamma]) + X[, r] * X[, t] * (1 - X[, gamma])) ^ 
      (Beta / (1 - X[, gamma])) - N ^ Beta)
+  # Constrain above 0
+  if(Y < 0) {
+    Y <- X[, Y0]
+  }
   # Compute how much water will we need to irrigate Y
   w <- (10 ^ Phi) * Y ^ Delta
   # Compute how much water we have 
@@ -1264,9 +1264,6 @@ model <- function(X) {
   # Constrain
   if(Y > X[, K]) {
     Y <- X[, K]
-  }
-  if(Y < 0) {
-    Y <- X[, Y0]
   }
   if(Y > Y.max) {
     Y <- Y.max
@@ -2342,4 +2339,11 @@ AB.dt2[Y %in% K] %>%
 
 sessionInfo()
 
+
+
+global.uncertainty[, sum(Total > 2745) / .N]
+
+
+cropland.1[, .(maximum = sum(max), 
+               minimum = sum(min)), Estimation]
 
