@@ -2219,7 +2219,8 @@ fwrite(sobol.ci, "sobol.ci.csv")
 a <- rbindlist(out.ci, idcol = "Continent") %>%
   .[!parameters %in% cluster] %>%
   plot_sobol(., type = 1, dummy = out.dummy.ci2) + 
-  scale_y_continuous(breaks = pretty_breaks(n = 3)) +
+  scale_y_continuous(breaks = pretty_breaks(n = 3), 
+                     limits = c(0, 1)) +
   facet_wrap(~Continent, ncol = 1) +
   labs(y = "Sobol' indices", 
        x = "" )
@@ -2228,7 +2229,8 @@ a <- rbindlist(out.ci, idcol = "Continent") %>%
 b <- rbindlist(out.ci, idcol = "Continent") %>%
   .[parameters %in% cluster] %>%
   plot_sobol(., type = 1, dummy = out.dummy.cluster.ci2) + 
-  scale_y_continuous(breaks = pretty_breaks(n = 3)) +
+  scale_y_continuous(breaks = pretty_breaks(n = 3), 
+                     limits = c(0, 1)) +
   facet_wrap(~Continent, ncol = 1) +
   labs(x = "", 
        y = "")
