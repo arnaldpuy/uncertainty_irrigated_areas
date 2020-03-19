@@ -563,6 +563,14 @@ total.area.irrigated <- df$meier %>%
   .[!Continent == "Oceania"] %>%
   split(., .$Continent, drop = TRUE)
 
+df$meier  %>%
+  data.table() %>%
+  melt(., measure.vars = c(4:9), 
+       variable.name = "Dataset", 
+       value.name = "Value") %>%
+  .[, Value:= Value / 10 ^6] %>%
+  .[, .(Total = sum(Value, na.rm = T)), .(Dataset, Continent)] %>%
+  .[, .(min = min(Total), max = max(Total)), Continent]
 
 ## ----define_bootstrap_replicas, cache=TRUE-----------------------------------------------
 
@@ -768,23 +776,6 @@ boot.samples.water <- rbind(ols.nonrobust.water,
 fwrite(boot.samples.pop, "boot.samples.pop.csv")
 fwrite(boot.samples.water, "boot.samples.water.csv")
 
-
-## ----predict_epsilon, cache=TRUE, dependson="dt_bootstrap_samples"-----------------------
-
-# PREDICT ALPHA FROM BETA ----------------------------------------------------
-
-# Predict Alpha from Beta
-summary.beta.alpha <- boot.samples.pop %>%
-  lm(.$Alpha ~ .$Beta, 
-     data = .)
-
-# Get intercept, slope and epsilon values
-Intercept <- coef(summary.beta.alpha)[[1]]
-Slope <- coef(summary.beta.alpha)[[2]]
-Epsilon <- summary(summary.beta.alpha)$sigma %>%
-  .^2
-
-
 ## ----lookup_tables, cache=TRUE, dependson="dt_bootstrap_samples"-------------------------
 
 # CREATE THE LOOKUP TABLE ---------------------------------------------------
@@ -806,7 +797,6 @@ lookup.water <- boot.samples.water[order(Delta), .SD, col_names2] %>%
   .[, index:= paste(Continent, Dataset, Robust, ID, sep = "_")]
 
 lookup.water <- setkey(lookup.water, index)
-
 
 ## ----export_bootstrap_samples, cache=TRUE, dependson=c("dt_bootstrap_samples", "lookup_tables")----
 
@@ -1042,14 +1032,14 @@ water.availability.dt <- water.availability[!Continent == "Oceania"] %>%
 # CREATE THE SAMPLE MATRIX --------------------------------------------------------
 
 # Create a vector with the name of the columns
-parameters <- c("X1", "X2", "X3", "X4", "W1", "W3", "W4", "r", 
-                "gamma", "Y0", "epsilon", "t", "K", "W_a", "eta")
+parameters <- c("X1", "X2", "X3", "X4", "W1", "W3", "W4", "r",
+                "gamma", "Y0", "t", "K", "W_a", "eta")
 
 # Obtain number of parameters
 k <- length(parameters)
 
 # Select sample size
-n <- 2 ^ 15
+n <- 2 ^ 10
 
 # Create vector with the continents
 Continents <- c("Africa", "Americas", "Asia", "Europe")
@@ -1073,7 +1063,7 @@ AB <- lapply(AB, setnames, parameters)
 # Create vectors with the name of the parameters within each cluster
 irrigation <- match(c("X1", "Y0", "W1", "W_a", "eta"), parameters)
 population2 <- match(c("r", "gamma"), parameters)
-model <- match(c("X2", "X3", "X4", "W3", "W4", "epsilon"), parameters)
+model <- match(c("X2", "X3", "X4", "W3", "W4"), parameters)
 
 
 # Create an A, B and AB matrices for the clustered parameters; retrieve
@@ -1137,7 +1127,6 @@ transform.sobol <- function(X) {
   X[, W3:= floor(W3 * (2-1+1)) + 1][, W3:= ifelse(W3==1, "YES", "NO")]
   X[, W4:= floor(W4 * (N.boot - 1)) + 1]
   X[, gamma:= 0.02 * qnorm(gamma) + 1]
-  X[, epsilon:= Epsilon * qnorm(epsilon) + 0]
   X[, t:= floor(t * (51-38 + 1)) + 38]
   X[, eta:= qunif(eta, min = 0.2, max = 0.5)]
   return(X)
@@ -1154,16 +1143,15 @@ transform.sobol.continents <- function(AB) {
       AB[[i]][, r:= (growth.rate.distr$Africa[[2]] * 
                        (-log(1 - r)) ^ (1/growth.rate.distr$Africa[[1]]) 
                      -5) / 100]
-      # Uniform distribution
-      AB[[i]][, Y0:= Y0 * 
-                (total.area.irrigated$Africa$max-total.area.irrigated$Africa$min) +
-                total.area.irrigated$Africa$min]
       # Unifrom distribution
       AB[[i]][, K:= K * (cropland$Africa$max-cropland$Africa$min) +
                 cropland$Africa$min]
       # Uniform distribution
       AB[[i]][, W_a:= qunif(W_a, min = water.availability.dt$Africa$lower, 
                             max = water.availability.dt$Africa$upper)]
+      AB[[i]][, Y0:= Y0 *
+                (total.area.irrigated$Africa$max-total.area.irrigated$Africa$min) +
+                total.area.irrigated$Africa$min]
     }
     if(i == "Asia") {
       # Weibull distribution, substract the constant and divide by 100
@@ -1171,31 +1159,29 @@ transform.sobol.continents <- function(AB) {
       AB[[i]][, r:= (growth.rate.distr$Asia[[2]] * 
                        (-log(1 - r)) ^ (1/growth.rate.distr$Asia[[1]])
                      -5) / 100]
-      # Uniform distribution
-      AB[[i]][, Y0:= Y0  * 
-                (total.area.irrigated$Asia$max-total.area.irrigated$Asia$min) +
-                total.area.irrigated$Asia$min]
       # Unifrom distribution
       AB[[i]][, K:= K * (cropland$Asia$max-cropland$Asia$min) +
                 cropland$Asia$min]
       # Uniform distribution
       AB[[i]][, W_a:= qunif(W_a, min = water.availability.dt$Asia$lower, 
                             max = water.availability.dt$Asia$upper)]
+      AB[[i]][, Y0:= Y0 *
+                (total.area.irrigated$Asia$max-total.area.irrigated$Asia$min) +
+                total.area.irrigated$Asia$min]
     }
     if(i == "Americas") {
       # Normal distribution
       AB[[i]][, r:= (growth.rate.distr$Americas[[2]] * 
                        qnorm(r) + growth.rate.distr$Americas[[1]])]
-      # Uniform distribution
-      AB[[i]][, Y0:= Y0  * 
-                (total.area.irrigated$Americas$max-total.area.irrigated$Americas$min) +
-                total.area.irrigated$Americas$min]
       # Unifrom distribution
       AB[[i]][, K:= K * (cropland$Americas$max-cropland$Americas$min) +
                 cropland$Americas$min]
       # Uniform distribution
       AB[[i]][, W_a:= qunif(W_a, min = water.availability.dt$Americas$lower, 
                             max = water.availability.dt$Americas$upper)]
+      AB[[i]][, Y0:= Y0 *
+                (total.area.irrigated$Americas$max-total.area.irrigated$Americas$min) +
+                total.area.irrigated$Americas$min]
     }
     if(i == "Europe") {
       # Weibull distribution, substract the constant and divide by 100
@@ -1203,16 +1189,14 @@ transform.sobol.continents <- function(AB) {
       AB[[i]][, r:=(growth.rate.distr$Europe[[2]] * 
                       (-log(1 - r)) ^ (1/growth.rate.distr$Europe[[1]])
                     -5) / 100]
-      # Uniform distribution
-      AB[[i]][, Y0:= Y0 * 
-                (total.area.irrigated$Europe$max-total.area.irrigated$Europe$min) +
-                total.area.irrigated$Europe$min]
       # Unifrom distribution
       AB[[i]][, K:= K * (cropland$Europe$max-cropland$Europe$min) +
                 cropland$Europe$min]
       # Uniform distribution
       AB[[i]][, W_a:= qunif(W_a, min = water.availability.dt$Europe$lower, 
                             max = water.availability.dt$Europe$upper)]
+      AB[[i]][, Y0:= Y0 * (total.area.irrigated$Europe$max-total.area.irrigated$Europe$min) +
+        total.area.irrigated$Europe$min]
     }
   }
   return(AB)
@@ -1235,7 +1219,6 @@ final.dt <- rbindlist(AB, idcol = "Continent")
 fwrite(final.dt, "final.dt.csv")
 print(final.dt)
 
-
 ## ----model, cache=TRUE-------------------------------------------------------------------
 
 # DEFINE THE MODEL ----------------------------------------------------------------
@@ -1244,20 +1227,17 @@ model <- function(X) {
   # Extract beta
   Beta <- lookup.pop[.(paste0(X[, 1:5], collapse = "_"))][, Beta]
   # Select population
-  N <- population[.(paste0(X[, c("Continent", "t")], collapse = "_"))] %>%
-    .[, N]
+  N <- population[.(paste0(X[, c("Continent", "t")], collapse = "_"))][, N]
+  # Compute Alpha
+  Alpha <- X[, Y0] / N ^ Beta
   # Extract phi and delta
   tmp <- lookup.water[.(paste0(X[, c(1, 6:8)], collapse = "_"))]
   Phi <- tmp[, Phi]
   Delta <- tmp[, Delta]
   # COMPUTE THE MODEL ---------------------------
-  Y <- X[, Y0] + 10 ^ (Intercept + Slope * Beta + X[, epsilon]) * 
+  Y <- Alpha * 
   ((N ^ (1- X[, gamma]) + X[, r] * X[, t] * (1 - X[, gamma])) ^ 
-     (Beta / (1 - X[, gamma])) - N ^ Beta)
-  # Constrain above 0
-    if(Y < 0) {
-    Y <- X[, Y0]
-  }
+     (Beta / (1 - X[, gamma])))
   # Compute how much water will we need to irrigate Y
   w <- (10 ^ Phi) * Y ^ Delta
   # Compute how much water we have 
@@ -1273,9 +1253,6 @@ model <- function(X) {
   }
   if(Y > Y.max) {
     Y <- Y.max
-    if(Y < X[, Y0]) {
-      Y <- X[, Y0]
-    }
   }
   return(c(Beta, N, Phi, Delta, w, w_i, Y.max, Y))
 }
@@ -1299,7 +1276,6 @@ Y <- foreach(i=1:nrow(final.dt),
 # Stop parallel cluster
 stopCluster(cl)
 
-
 ## ----arrange_output, cache.lazy = FALSE, cache=TRUE, dependson=c("run_model", "final.dt", "transform_outliers", "export.final.dt")----
 
 # ADD MODEL OUTPUT ---------------------------------------------------------------
@@ -1313,6 +1289,13 @@ full.dt <- cbind(final.dt, data.table(do.call(rbind, Y))) %>%
 AB.dt <- full.dt[, .SD[1:(n * 2)], Continent]
 
 
+AB.dt <- fread("AB.dt.csv")
+
+global.uncertainty[, .(mean = mean(Total), 
+          sd = sd(Total), 
+          min = min(Total), 
+          max = max(Total))]
+
 ## ----export_full_model output, cache=TRUE, dependson="arrange_output"--------------------
 
 # EXPORT MODEL OUTPUT ------------------------------------------------------------
@@ -1320,13 +1303,11 @@ AB.dt <- full.dt[, .SD[1:(n * 2)], Continent]
 fwrite(full.dt, "full.dt.csv")
 
 
-
 ## ----export_AB_matrix, cache=TRUE, dependson="arrange_output"----------------------------
 
 # EXPORT AB MATRICES -------------------------------------------------------------
 
 fwrite(AB.dt, "AB.dt.csv")
-
 
 ## ----quantiles, cache=TRUE, dependson="arrange_output"-----------------------------------
 
@@ -1370,6 +1351,7 @@ global.uncertainty <- AB.dt %>%
   do.call("cbind", .) %>%
   data.table() %>%
   .[, Total:= rowSums(.)]
+x
 
 # Calculate the 2.5 and the 97.5 quantiles
 global.quantile <- quantile(global.uncertainty$Total,
@@ -1571,7 +1553,7 @@ code_columns2 <- function(x) ifelse(x == "YES", 1, 2)
 
 # Vector with renamed parameters for better plotting
 parameters.renamed <- c("X1", "X2", "X3", "X4", "W1", "W3", "W4", "r", "$\\gamma$", 
-                        "Y0", "$\\epsilon$", "t", "K", "Wa", "$\\eta$")
+                        "Y0", "t", "K", "Wa", "$\\eta$")
 
 # Create temporary data table to plot
 tmp <- cbind(AB.dt[, .(Continent)], AB.dt[, ..parameters], AB.dt[, .(Y)]) 
@@ -2029,6 +2011,12 @@ sobol_indices <- function(Y, params, type = "jansen",
 }
 
 
+
+
+full.dt <- fread("full.dt.csv")
+AB.dt <- fread("AB.dt.csv")
+
+
 ## ----sobol_settings, cache=TRUE, dependson="arrange_output"------------------------------
 
 # SETTING FOR SOBOL' INDICES ----------------------------------------------------
@@ -2060,7 +2048,6 @@ out <- full.dt[, sobol_indices(Y,
                                ncpus = floor(detectCores() * 0.75)),
                by = Continent]
 
-
 ## ----sobol_ci, cache=TRUE, dependson=c("sobol_indices", "sobol_settings", "sobol_functions")----
 
 # SOBOL' CONFIDENCE INTERVALS ---------------------------------------------------
@@ -2075,7 +2062,7 @@ for(i in names(tmp)) {
                           conf = conf)
 }
 
-
+sensobol::sobol_c
 ## ----sobol_indices_dummy, cache=TRUE, dependson=c("arrange_output", "sobol_settings", "sobol_functions")----
 
 # SOBOL' INDICES OF A DUMMY PARAMETER -------------------------------------------
@@ -2359,4 +2346,98 @@ cat("Num threads: "); print(detectCores(logical = TRUE))
 
 ## Return the machine RAM
 cat("RAM:         "); print (get_ram()); cat("\n")
+
+
+
+
+AB.dt <- fread("AB.dt.csv")
+
+
+
+# ARRANGE SCATTERPLOTS OF PARAMETERS VS MODEL OUTPUT ----------------------------
+
+# Function to recode some parameters to allow plotting
+code_columns <- function(x) {
+  dt <- ifelse(x == "Aquastat", 1, 
+               ifelse(x == "FAOSTAT", 2,
+                      ifelse(x == "Siebert.et.al.2013", 3, 
+                             ifelse(x == "Meier.et.al.2018", 4, 
+                                    ifelse(x == "Salmon.et.al.2015", 5, 6)))))
+  return(dt)
+}
+
+code_columns2 <- function(x) ifelse(x == "YES", 1, 2)
+
+# Vector with renamed parameters for better plotting
+parameters.renamed <- c("X1", "X2", "X3", "X4", "W1", "W3", "W4", "r", "$\\gamma$", 
+                        "Y0", "t", "K", "Wa", "$\\eta$")
+
+# Create temporary data table to plot
+tmp <- cbind(AB.dt[, .(Continent)], AB.dt[, ..parameters], AB.dt[, .(Y)]) 
+
+# Update columns and arrange
+# Update columns to allow plotting of scatterplots
+col_names <- c("X1", "W1")
+col_names2 <- c("X3", "W3")
+tmp <- tmp[, (col_names):= lapply(.SD, code_columns), .SDcols = col_names]
+tmp <- tmp[, (col_names2):= lapply(.SD, code_columns2), .SDcols = col_names2]
+tmp <- tmp[, X2:= ifelse(X2 == "OLS", 1, 2)]
+
+tmp2 <- gather(tmp, Parameters, Values, X1:eta) %>%
+  split(., .$Continent) 
+
+# PLOT SCATTERPLOTS OF PARAMETERS VS MODEL OUTPUT ------------------------------
+
+gg <- list()
+for(i in names(tmp2)) {
+  gg[[i]] <- ggplot(tmp2[[i]], aes(Values, Y)) +
+    geom_hex() +
+    scale_x_continuous(breaks = pretty_breaks(n = 3)) +
+    scale_fill_gradient(breaks = pretty_breaks(n = 2)) +
+    scale_y_log10() +
+    scale_alpha(guide = "none") + 
+    labs(x = "Values",
+         y = "Area irrigated 2050 (Mha)") +
+    facet_wrap(~Parameters,
+               scales = "free_x",
+               ncol = 3, 
+               labeller = label_parsed) +
+    theme_bw() +
+    theme(panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank(), 
+          legend.background = element_rect(fill = "transparent", 
+                                           color = NA), 
+          legend.key = element_rect(fill = "transparent", 
+                                    color = NA), 
+          legend.position = "top") +
+    ggtitle(names(tmp2[i]))
+}
+
+gg[[1]]
+gg[[2]]
+gg[[3]]
+gg[[4]]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+devtools::install_github("arnaldpuy/sensobol", build_vignettes = TRUE)
+library(sensobol)
+
+
+params <- paste("X", 1:3, sep = "")
+sensobol::sobol_matrices(N = 10, params = params, cluster = list(c(1, 3)))
 
