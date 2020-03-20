@@ -1624,10 +1624,45 @@ col_names <- c("X1", "W1")
 col_names2 <- c("X3", "W3")
 tmp <- tmp[, (col_names):= lapply(.SD, code_columns), .SDcols = col_names]
 tmp <- tmp[, (col_names2):= lapply(.SD, code_columns2), .SDcols = col_names2]
-tmp <- tmp[, X2:= ifelse(X2 == "OLS", 1, 2)]
+tmp <- tmp[, X2:= ifelse(X2 == "OLS", 1, 2)][Y > 1]
 
 tmp2 <- gather(tmp, Parameters, Values, X1:eta) %>%
   split(., .$Continent) 
+```
+
+```{r scatter_uncertain, cache=TRUE, fig.height=8, fig.width=4.6, dependson = c("sensitivity_scatterplots", "arrange_output")}
+
+# SCATTERPLOTS OF MODEL OUTPUT AGAINST UNCERTAIN INPUTS ---------------------------
+
+gg <- list()
+for(i in names(tmp2)) {
+  gg[[i]] <- ggplot(tmp2[[i]], aes(Values, Y)) +
+    geom_hex() +
+    scale_x_continuous(breaks = pretty_breaks(n = 3)) +
+    scale_fill_gradient(breaks = pretty_breaks(n = 2)) +
+    scale_y_log10() +
+    scale_alpha(guide = "none") + 
+    labs(x = "Values",
+         y = "Area irrigated 2050 (Mha)") +
+    facet_wrap(~Parameters,
+               scales = "free_x",
+               ncol = 3, 
+               labeller = label_parsed) +
+    theme_bw() +
+    theme(panel.grid.major = element_blank(), 
+          panel.grid.minor = element_blank(), 
+          legend.background = element_rect(fill = "transparent", 
+                                           color = NA), 
+          legend.key = element_rect(fill = "transparent", 
+                                    color = NA), 
+          legend.position = "top") +
+    ggtitle(names(tmp2[i]))
+}
+
+gg[[1]]
+gg[[2]]
+gg[[3]]
+gg[[4]]
 ```
 
 ## Sobol' indices

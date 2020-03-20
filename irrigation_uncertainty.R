@@ -1,8 +1,8 @@
-## ----setup, include=FALSE----------------------------------------------------------------
+## ----setup, include=FALSE----------------------------------------------------
 knitr::opts_chunk$set(echo = TRUE)
 
 
-## ----preliminary steps, results="hide", message=FALSE, warning=FALSE---------------------
+## ----preliminary steps, results="hide", message=FALSE, warning=FALSE---------
 
 # PRELIMINARY STEPS ------------------------------------------------------
 
@@ -75,7 +75,7 @@ theme_AP <- function() {
 } 
 
 
-## ----datasets, warning=FALSE, cache=TRUE-------------------------------------------------
+## ----datasets, warning=FALSE, cache=TRUE-------------------------------------
 
 # PREPARE DATASETS -------------------------------------------------------
 
@@ -222,7 +222,7 @@ df.meier %>%
   theme(legend.position = "top")
 
 
-## ----read_aquastat_dataset, cache=TRUE---------------------------------------------------
+## ----read_aquastat_dataset, cache=TRUE---------------------------------------
 
 # READ IN AQUASTAT DATA SET ---------------------------------------------------
 
@@ -244,7 +244,7 @@ aquastat <- aquastat[, (cols):= lapply(.SD, factor), .SDcols = cols] %>%
   .[!c(Year <= 1999 | Year >= 2012)] # Retain only years 1999-2012
 
 
-## ----function_code, cache=TRUE-----------------------------------------------------------
+## ----function_code, cache=TRUE-----------------------------------------------
 
 # FUNCTIONS TO CODE -----------------------------------------------------------
 
@@ -394,7 +394,7 @@ df$meier %>%
         panel.grid.minor = element_blank())
 
 
-## ----plot_country_level, dev="tikz", cache=TRUE, message=FALSE, warning=FALSE------------
+## ----plot_country_level, dev="tikz", cache=TRUE, message=FALSE, warning=FALSE----
 
 # DIFFERENCES IN THE MEASUREMENT OF IRRIGATED AREAS
 # AS A FUNCTION OF DATASET (COUNTRY) ---------------------------------------------
@@ -459,7 +459,7 @@ second <- plot_grid(gg[[3]], gg[[4]], ncol = 2)
 plot_grid(legend, second, ncol = 1)
 
 
-## ----out, fig.keep="none", cache=TRUE, dependson="datasets"------------------------------
+## ----out, fig.keep="none", cache=TRUE, dependson="datasets"------------------
 
 # CHECK WHETHER THERE ARE OUTLIERS IN AREA.IRRIGATED VS. POPULATION 
 # AND AREA.IRRIGATED VS WATER REQUIRED FOR IRRIGATION -------------------------
@@ -502,7 +502,7 @@ out.df <- out.n[out.md, on = c("Dataset", "Continent", "Class")] %>%
   .[order(Continent)]
 
 
-## ----outlier_export, dependson="out", cache=TRUE-----------------------------------------
+## ----outlier_export, dependson="out", cache=TRUE-----------------------------
 
 # EXPORT OUTLIERS DATASET ------------------------------------------------
 
@@ -547,7 +547,7 @@ plot(gg[["Population"]])
 plot(gg[["Water"]])
 
 
-## ----irrigated_area_baseline, dependson="datasets", cache=TRUE---------------------------
+## ----irrigated_area_baseline, dependson="datasets", cache=TRUE---------------
 
 # CALCULATE FOR EACH CONTINENT THE MAXIMUM AND MINIMUM
 # EXTENSION OF IRRIGATED AREAS -------------------------------------------
@@ -563,16 +563,8 @@ total.area.irrigated <- df$meier %>%
   .[!Continent == "Oceania"] %>%
   split(., .$Continent, drop = TRUE)
 
-df$meier  %>%
-  data.table() %>%
-  melt(., measure.vars = c(4:9), 
-       variable.name = "Dataset", 
-       value.name = "Value") %>%
-  .[, Value:= Value / 10 ^6] %>%
-  .[, .(Total = sum(Value, na.rm = T)), .(Dataset, Continent)] %>%
-  .[, .(min = min(Total), max = max(Total)), Continent]
 
-## ----define_bootstrap_replicas, cache=TRUE-----------------------------------------------
+## ----define_bootstrap_replicas, cache=TRUE-----------------------------------
 
 # DEFINE NUMBER OF BOOTSTRAP REPLICAS -------------------------------------------
 
@@ -721,7 +713,7 @@ smaB <- dt.regressions[, list(list(boot(.SD,
                        .(Continent, Dataset)]
 
 
-## ----extract_alpha_beta_robust, cache=TRUE, dependson="sma_regression"-------------------
+## ----extract_alpha_beta_robust, cache=TRUE, dependson="sma_regression"-------
 
 # EXTRACT ALPHA AND BETA ROBUST SMA ---------------------------------------------
 
@@ -744,7 +736,7 @@ sma.robust.pop <- smaB[, "All":= list(lapply(V1, function(x) x["t"]))] %>%
   .[, Robust:= "YES"]
 
 
-## ----export_sma, cache=TRUE, dependson="extract_alpha_beta_robust"-----------------------
+## ----export_sma, cache=TRUE, dependson="extract_alpha_beta_robust"-----------
 
 # EXPORT BOOTSTRAP REPLICAS ---------------------------------------------------
 
@@ -769,14 +761,15 @@ boot.samples.water <- rbind(ols.nonrobust.water,
   .[order(Continent, Dataset)]
 
 
-## ----export_bootstrap_samples2, cache=TRUE, dependson="dt_bootstrap_samples"-------------
+## ----export_bootstrap_samples2, cache=TRUE, dependson="dt_bootstrap_samples"----
 
 # EXPORT BOOTSTRAP SAMPLES ------------------------------------------------------
 
 fwrite(boot.samples.pop, "boot.samples.pop.csv")
 fwrite(boot.samples.water, "boot.samples.water.csv")
 
-## ----lookup_tables, cache=TRUE, dependson="dt_bootstrap_samples"-------------------------
+
+## ----lookup_tables, cache=TRUE, dependson="dt_bootstrap_samples"-------------
 
 # CREATE THE LOOKUP TABLE ---------------------------------------------------
 
@@ -798,6 +791,7 @@ lookup.water <- boot.samples.water[order(Delta), .SD, col_names2] %>%
 
 lookup.water <- setkey(lookup.water, index)
 
+
 ## ----export_bootstrap_samples, cache=TRUE, dependson=c("dt_bootstrap_samples", "lookup_tables")----
 
 # EXPORT BOOTSTRAP SAMPLES TO CSV ------------------------------------------
@@ -806,7 +800,7 @@ fwrite(lookup.pop, "lookup.pop.csv")
 fwrite(lookup.water, "lookup.water.csv")
 
 
-## ----population_baseline, cache=TRUE, dependson="datasets"-------------------------------
+## ----population_baseline, cache=TRUE, dependson="datasets"-------------------
 
 # CREATE DATA FRAME WITH POPULATION BASELINE VALUES ------------------------------
 
@@ -957,7 +951,7 @@ growth.rate.distr <- list(distr.weib$Africa$estimate,
 names(growth.rate.distr) <- c("Africa", "Asia", "Europe", "Americas")   
 
 
-## ----cropland_available, cache=TRUE, dependson="datasets"--------------------------------
+## ----cropland_available, cache=TRUE, dependson="datasets"--------------------
 
 # INTEGRATE CROPLAND AVAILABLE WITH MODEL OUTPUT UNCERTAINTY --------------------
 
@@ -1007,7 +1001,7 @@ cropland <- cropland.1 %>%
   split(., .$Continent) 
 
 
-## ----water_available, cache=TRUE---------------------------------------------------------
+## ----water_available, cache=TRUE---------------------------------------------
 
 # DEFINE DISTRIBUTIONS FOR THE TOTAL WATER AVAILABLE ----------------------------
 
@@ -1027,7 +1021,7 @@ water.availability.dt <- water.availability[!Continent == "Oceania"] %>%
   split(., .$Continent)
 
 
-## ----settings_sample_matrix, cache=TRUE, results="hide", message=FALSE-------------------
+## ----settings_sample_matrix, cache=TRUE, results="hide", message=FALSE-------
 
 # CREATE THE SAMPLE MATRIX --------------------------------------------------------
 
@@ -1039,7 +1033,7 @@ parameters <- c("X1", "X2", "X3", "X4", "W1", "W3", "W4", "r",
 k <- length(parameters)
 
 # Select sample size
-n <- 2 ^ 10
+n <- 2 ^ 15
 
 # Create vector with the continents
 Continents <- c("Africa", "Americas", "Asia", "Europe")
@@ -1065,10 +1059,8 @@ irrigation <- match(c("X1", "Y0", "W1", "W_a", "eta"), parameters)
 population2 <- match(c("r", "gamma"), parameters)
 model <- match(c("X2", "X3", "X4", "W3", "W4"), parameters)
 
-
 # Create an A, B and AB matrices for the clustered parameters; retrieve
 # only the AB
-
 AB.cluster <- lapply(Continents, function(Continents) 
   sobol_matrices(n = n, 
                  k = k, 
@@ -1090,7 +1082,7 @@ for(i in names(AB)) {
 }
 
 
-## ----number_boot_replicas, cache=TRUE, dependson="dt_bootstrap_samples"------------------
+## ----number_boot_replicas, cache=TRUE, dependson="dt_bootstrap_samples"------
 
 # CHECK NUMBER OF BOOTSTRAP SAMPLES OF BETA, DELTA, ETC. -------------------------
 
@@ -1106,6 +1098,8 @@ print(N.boot)
 
 # TRANSFORM THE SAMPLE MATRIX ----------------------------------------------------
 
+# Create function to transform the parameters that 
+# have the same distribution in all continents
 # Create function to transform the parameters that 
 # have the same distribution in all continents
 transform.sobol <- function(X) {
@@ -1219,7 +1213,8 @@ final.dt <- rbindlist(AB, idcol = "Continent")
 fwrite(final.dt, "final.dt.csv")
 print(final.dt)
 
-## ----model, cache=TRUE-------------------------------------------------------------------
+
+## ----model, cache=TRUE-------------------------------------------------------
 
 # DEFINE THE MODEL ----------------------------------------------------------------
 
@@ -1258,7 +1253,7 @@ model <- function(X) {
 }
 
 
-## ----run_model, cache=TRUE, dependson=c("model", "export.final.dt")----------------------
+## ----run_model, cache=TRUE, dependson=c("model", "export.final.dt")----------
 
 # RUN MODEL USING PARALLEL COMPUTING --------------------------------------------
 
@@ -1276,9 +1271,10 @@ Y <- foreach(i=1:nrow(final.dt),
 # Stop parallel cluster
 stopCluster(cl)
 
+
 ## ----arrange_output, cache.lazy = FALSE, cache=TRUE, dependson=c("run_model", "final.dt", "transform_outliers", "export.final.dt")----
 
-# ADD MODEL OUTPUT ---------------------------------------------------------------
+# ADD MODEL OUTPUT ----------------------------------------------------------------
 
 model.output <- c("Beta", "N", "Phi", "Delta", "w", "w_i", "Y.max", "Y")
 
@@ -1289,29 +1285,24 @@ full.dt <- cbind(final.dt, data.table(do.call(rbind, Y))) %>%
 AB.dt <- full.dt[, .SD[1:(n * 2)], Continent]
 
 
-AB.dt <- fread("AB.dt.csv")
+## ----export_full_model output, cache=TRUE, dependson="arrange_output"--------
 
-global.uncertainty[, .(mean = mean(Total), 
-          sd = sd(Total), 
-          min = min(Total), 
-          max = max(Total))]
-
-## ----export_full_model output, cache=TRUE, dependson="arrange_output"--------------------
-
-# EXPORT MODEL OUTPUT ------------------------------------------------------------
+# EXPORT MODEL OUTPUT -------------------------------------------------------------
 
 fwrite(full.dt, "full.dt.csv")
 
 
-## ----export_AB_matrix, cache=TRUE, dependson="arrange_output"----------------------------
 
-# EXPORT AB MATRICES -------------------------------------------------------------
+## ----export_AB_matrix, cache=TRUE, dependson="arrange_output"----------------
+
+# EXPORT AB MATRICES --------------------------------------------------------------
 
 fwrite(AB.dt, "AB.dt.csv")
 
-## ----quantiles, cache=TRUE, dependson="arrange_output"-----------------------------------
 
-# COMPUTE QUANTILES --------------------------------------------------------------
+## ----quantiles, cache=TRUE, dependson="arrange_output"-----------------------
+
+# COMPUTE QUANTILES ---------------------------------------------------------------
 
 # Check number and proportion of negative model output values
 AB.dt[, .(negative.runs = sum(Y < 0), 
@@ -1329,9 +1320,9 @@ quant <- AB.dt[Y > 0] %>%
 print(quant)
 
 
-## ----global_uncertainty, cache=TRUE, dependson="arrange_output"--------------------------
+## ----global_uncertainty, cache=TRUE, dependson="arrange_output"--------------
 
-# COMPUTE QUANTILES AT THE GLOBAL LEVEL ------------------------------------------
+# COMPUTE QUANTILES AT THE GLOBAL LEVEL -------------------------------------------
 
 projections <- df$projections %>%
   select(Study, `2050`, Group) %>%
@@ -1351,7 +1342,6 @@ global.uncertainty <- AB.dt %>%
   do.call("cbind", .) %>%
   data.table() %>%
   .[, Total:= rowSums(.)]
-x
 
 # Calculate the 2.5 and the 97.5 quantiles
 global.quantile <- quantile(global.uncertainty$Total,
@@ -1364,9 +1354,9 @@ global.quantile <- quantile(global.uncertainty$Total,
 print(global.quantile)
 
 
-## ----read_projections--------------------------------------------------------------------
+## ----read_projections--------------------------------------------------------
 
-# READ PROJECTIONS OF IRRIGATED AREAS AT THE CONTINENTAL LEVEL --------------------
+# READ PROJECTIONS OF IRRIGATED AREAS AT THE CONTINENTAL LEVEL ----------------------
 
 irrigated_area_2050 <- fread("irrigated_area_2050.csv")[, World:= NULL]
 irrigated_area_2050_dt <- melt(irrigated_area_2050, 
@@ -1390,7 +1380,7 @@ sapply(Continents, function(x) AB.dt[Continent == x,
 
 ## ----plot_uncertainty_final, cache=TRUE, dependson=c("global_uncertainty", "quantiles", "arrange_output", "read_projections"), dev="tikz", fig.height=4.5, fig.width=6.5----
 
-# PLOT UNCERTAINTY ---------------------------------------------------------------
+# PLOT UNCERTAINTY ----------------------------------------------------------------
 
 # Continental level
 a <- AB.dt %>%
@@ -1482,7 +1472,7 @@ b <- global.uncertainty %>%
   scale_x_log10(# Limit the x axis for better visualization
                 limits = c(200, 4300)) +
   theme_bw() +
-  theme(legend.position = c(0.82, 0.58),
+  theme(legend.position = c(0.7, 0.58),
         panel.grid.major = element_blank(),
         panel.grid.minor = element_blank(),
         legend.background = element_rect(fill = alpha("white", 0.7)),
@@ -1492,7 +1482,7 @@ b <- global.uncertainty %>%
 
 ## ----extra_plot, cache=TRUE, dependson=c("global_uncertainty", "quantiles", "arrange_output", "read_projections", "plot_uncertainty_final"), dev="tikz", fig.height=6.8, fig.width=4.7----
 
-# PLOT ------------------------------------------------------------------------
+# PLOT -------------------------------------------------------------------------
 
 plot_grid(a + labs(x = "", y = "Counts"), 
           b + labs(x = "Area irrigated 2050 (Mha)", y = "Counts"), 
@@ -1505,21 +1495,21 @@ plot_grid(a + labs(x = "", y = "Counts"),
 
 ## ----global_only, cache=TRUE, dependson=c("plot_uncertainty", "extra_plot"), dev="tikz", fig.height=2.5, fig.width=4.7----
 
-# PLOT ------------------------------------------------------------------------
+# PLOT -------------------------------------------------------------------------
 
 b + theme(plot.margin = margin(l = 0, unit = "cm"))
 
 
-## ----export_global, cache=TRUE, dependson="global_uncertainty"---------------------------
+## ----export_global, cache=TRUE, dependson="global_uncertainty"---------------
 
-# EXPORT GLOBAL UNCERTAINTY -----------------------------------------------------
+# EXPORT GLOBAL UNCERTAINTY ------------------------------------------------------
 
 fwrite(global.uncertainty, "global.uncertainty.csv")
 
 
 ## ----uncertainty_statistics, cache=TRUE, dependson=c("arrange_output", "global_uncertainty")----
 
-# UNCERTAINTY STATISTICS --------------------------------------------------------
+# UNCERTAINTY STATISTICS ---------------------------------------------------------
 
 # How many model runs hit K?
 AB.dt[, sum((Y == K) / .N) * 100, Continent]
@@ -1535,9 +1525,9 @@ global.uncertainty[, .(N = .N,
                        less.100 = sum((Total < 10^2) / .N) * 100)] 
 
 
-## ----sensitivity_scatterplots, cache=TRUE, dependson="arrange_output"--------------------
+## ----sensitivity_scatterplots, cache=TRUE, dependson="arrange_output"--------
 
-# ARRANGE SCATTERPLOTS OF PARAMETERS VS MODEL OUTPUT ----------------------------
+# ARRANGE SCATTERPLOTS OF PARAMETERS VS MODEL OUTPUT -----------------------------
 
 # Function to recode some parameters to allow plotting
 code_columns <- function(x) {
@@ -1564,15 +1554,15 @@ col_names <- c("X1", "W1")
 col_names2 <- c("X3", "W3")
 tmp <- tmp[, (col_names):= lapply(.SD, code_columns), .SDcols = col_names]
 tmp <- tmp[, (col_names2):= lapply(.SD, code_columns2), .SDcols = col_names2]
-tmp <- tmp[, X2:= ifelse(X2 == "OLS", 1, 2)]
+tmp <- tmp[, X2:= ifelse(X2 == "OLS", 1, 2)][Y > 1]
 
 tmp2 <- gather(tmp, Parameters, Values, X1:eta) %>%
   split(., .$Continent) 
 
 
-## ----plot_scatterplots, cache=TRUE, dependson="sensitivity_scatterplots", fig.height=8.5, fig.width=4.7----
+## ----scatter_uncertain, cache=TRUE, fig.height=8, fig.width=4.6, dependson = c("sensitivity_scatterplots", "arrange_output")----
 
-# PLOT SCATTERPLOTS OF PARAMETERS VS MODEL OUTPUT ------------------------------
+# SCATTERPLOTS OF MODEL OUTPUT AGAINST UNCERTAIN INPUTS ---------------------------
 
 gg <- list()
 for(i in names(tmp2)) {
@@ -1605,10 +1595,10 @@ gg[[3]]
 gg[[4]]
 
 
-## ----sobol_functions, cache=TRUE, echo=FALSE---------------------------------------------
+## ----sobol_functions, cache=TRUE, echo=FALSE---------------------------------
 
 # FUNCTION TO COMPUTE SOBOL' FIRST AND TOTAL-ORDER EFFECTS USING
-# THE JANSEN 1999 ESTIMATOR FOR FIRST AND TOTAL INDICES -------------------------
+# THE JANSEN 1999 ESTIMATOR FOR FIRST AND TOTAL INDICES ---------------------------
 
 sobol_computeJ <- function(Y_A, Y_B, Y_AB) {
   # Compute sample mean of output
@@ -2011,15 +2001,9 @@ sobol_indices <- function(Y, params, type = "jansen",
 }
 
 
+## ----sobol_settings, cache=TRUE, dependson="arrange_output"------------------
 
-
-full.dt <- fread("full.dt.csv")
-AB.dt <- fread("AB.dt.csv")
-
-
-## ----sobol_settings, cache=TRUE, dependson="arrange_output"------------------------------
-
-# SETTING FOR SOBOL' INDICES ----------------------------------------------------
+# SETTING FOR SOBOL' INDICES ------------------------------------------------------
 
 # Set the number of bootstraps
 R <- 1000
@@ -2036,7 +2020,7 @@ cluster <- c("Irrigation", "Population", "Model")
 
 ## ----sobol_indices, cache=TRUE, dependson=c("arrange_output", "sobol_settings", "sobol_functions")----
 
-# COMPUTE SOBOL' INDICES --------------------------------------------------------
+# COMPUTE SOBOL' INDICES ----------------------------------------------------------
 
 # Compute Sobol' indices
 out <- full.dt[, sobol_indices(Y,
@@ -2048,9 +2032,10 @@ out <- full.dt[, sobol_indices(Y,
                                ncpus = floor(detectCores() * 0.75)),
                by = Continent]
 
+
 ## ----sobol_ci, cache=TRUE, dependson=c("sobol_indices", "sobol_settings", "sobol_functions")----
 
-# SOBOL' CONFIDENCE INTERVALS ---------------------------------------------------
+# SOBOL' CONFIDENCE INTERVALS -----------------------------------------------------
 
 # Compute confidence intervals
 tmp <- split(out, out$Continent)
@@ -2062,10 +2047,10 @@ for(i in names(tmp)) {
                           conf = conf)
 }
 
-sensobol::sobol_c
+
 ## ----sobol_indices_dummy, cache=TRUE, dependson=c("arrange_output", "sobol_settings", "sobol_functions")----
 
-# SOBOL' INDICES OF A DUMMY PARAMETER -------------------------------------------
+# SOBOL' INDICES OF A DUMMY PARAMETER ---------------------------------------------
 
 # For the model parameters
 out.dummy <- full.dt[, .SD[1:(n * (k + 2))], Continent] %>%
@@ -2120,7 +2105,7 @@ out.dummy.cluster.ci2 <- rbindlist(out.dummy.cluster.ci, idcol = "Continent")
 
 ## ----export_sobol_indices, cache=TRUE, dependson=c("sobol_ci_dummy", "sobol_ci", "sobol_settings", "sobol_functions")----
 
-# EXPORT SOBOL' INDICES ---------------------------------------------------------
+# EXPORT SOBOL' INDICES -----------------------------------------------------------
 
 sobol.ci <- rbindlist(out.ci, idcol = "Continent") 
 fwrite(sobol.ci, "sobol.ci.csv")
@@ -2128,13 +2113,14 @@ fwrite(sobol.ci, "sobol.ci.csv")
 
 ## ----prepare_plot_sobol, cache=TRUE, dependson=c("sobol_ci_dummy", "sobol_ci", "sobol_settings", "sobol_functions")----
 
-# PREPARE PLOT SOBOL' INDICES ---------------------------------------------------
+# PREPARE PLOT SOBOL' INDICES -----------------------------------------------------
 
 # Plot Sobol' indices of parameters
 a <- rbindlist(out.ci, idcol = "Continent") %>%
   .[!parameters %in% cluster] %>%
   plot_sobol(., type = 1, dummy = out.dummy.ci2) + 
-  scale_y_continuous(breaks = pretty_breaks(n = 3)) +
+  scale_y_continuous(breaks = pretty_breaks(n = 3), 
+                     limits = c(0, 1)) +
   facet_wrap(~Continent, ncol = 1) +
   labs(y = "Sobol' indices", 
        x = "" )
@@ -2143,7 +2129,8 @@ a <- rbindlist(out.ci, idcol = "Continent") %>%
 b <- rbindlist(out.ci, idcol = "Continent") %>%
   .[parameters %in% cluster] %>%
   plot_sobol(., type = 1, dummy = out.dummy.cluster.ci2) + 
-  scale_y_continuous(breaks = pretty_breaks(n = 3)) +
+  scale_y_continuous(breaks = pretty_breaks(n = 3), 
+                     limits = c(0, 1)) +
   facet_wrap(~Continent, ncol = 1) +
   labs(x = "", 
        y = "")
@@ -2151,7 +2138,7 @@ b <- rbindlist(out.ci, idcol = "Continent") %>%
 
 ## ----plot_sobol, cache=TRUE, dependson="prepare_plot_sobol", dev="tikz", fig.height=5.3, fig.width=6.2----
 
-# PLOT SOBOL' INDICES ------------------------------------------------------------
+# PLOT SOBOL' INDICES -------------------------------------------------------------
 
 # Merge legend and a and b
 plot_grid(a + theme(legend.position = c(0.4, 0.95), 
@@ -2164,7 +2151,7 @@ plot_grid(a + theme(legend.position = c(0.4, 0.95),
 
 ## ----prepare_plot_sobol2, cache=TRUE, dependson=c("sobol_ci_dummy", "sobol_ci", "sobol_settings", "sobol_functions"), dev="tikz", fig.height=5, fig.width=5.2----
 
-# Merge both plots ----------
+# Merge both plots -----------
 bottom <- plot_grid(a + theme(legend.position="none", 
                               axis.text.x = element_text(size = 7.2)), 
                     b + theme(legend.position="none", 
@@ -2179,9 +2166,9 @@ plot_grid(legend,
           rel_heights = c(0.15, 1))
 
 
-## ----check_sum_si, cache=TRUE, dependson="export_sobol_indices"--------------------------
+## ----check_sum_si, cache=TRUE, dependson="export_sobol_indices"--------------
 
-# CHECK SUM OF SI INDICES -------------------------------------------------------
+# CHECK SUM OF SI INDICES ---------------------------------------------------------
 
 # Parameters only, no cluster
 sobol.ci[!parameters %in% c("Irrigation", "Population", "Model")] %>%
@@ -2194,9 +2181,9 @@ sobol.ci[parameters %in% c("Irrigation", "Population", "Model")] %>%
   .[, sum(original),  Continent]
 
 
-## ----pop_model, cache=TRUE---------------------------------------------------------------
+## ----pop_model, cache=TRUE---------------------------------------------------
 
-# CREATE POPULATION MODEL -------------------------------------------------------
+# CREATE POPULATION MODEL ---------------------------------------------------------
 
 population_fun <- function(N0, r, t, gamma) {
   N <- N0
@@ -2207,9 +2194,9 @@ population_fun <- function(N0, r, t, gamma) {
 }
 
 
-## ----run_pop_model, cache=TRUE, dependson=c("arrange_output", "pop_model")---------------
+## ----run_pop_model, cache=TRUE, dependson=c("arrange_output", "pop_model")----
 
-# RUN POPULATION MODEL ----------------------------------------------------------
+# RUN POPULATION MODEL ------------------------------------------------------------
 
 AB.dt2 <- AB.dt[, N50:= population_fun(N0 = N, r = r, t = t, gamma = gamma ), 
       seq_len(nrow(AB.dt))]
@@ -2217,7 +2204,7 @@ AB.dt2 <- AB.dt[, N50:= population_fun(N0 = N, r = r, t = t, gamma = gamma ),
 
 ## ----arrange_pop_data, cache=TRUE, dependson=c("preliminary steps", "arrange_output", "global_uncertainty")----
 
-# ARRANGE DATA ------------------------------------------------------------------
+# ARRANGE DATA --------------------------------------------------------------------
 
 projections_N <- fread("projections_N.csv")
 
@@ -2238,9 +2225,9 @@ dt.total <- data.table(cbind(global.uncertainty$Total, global.population$Total_N
   setnames(c("V1", "V2"), c("Total.irrigation", "Total.population"))
 
 
-## ----plot_pop_plots, cache=TRUE, dependson="arrange_pop_data"----------------------------
+## ----plot_pop_plots, cache=TRUE, dependson="arrange_pop_data"----------------
 
-# PLOT POPULATION AND IRRIGATED AREAS SCATTERPLOTS -------------------------------
+# PLOT POPULATION AND IRRIGATED AREAS SCATTERPLOTS ----------------------------------
 
 a <- ggplot(AB.dt2, aes(N50, Y)) +
   geom_point(alpha = 0.05, size = 0.1) + 
@@ -2309,14 +2296,14 @@ bottom <- plot_grid(a, b, ncol = 1, labels = "auto")
 
 ## ----plot_pop_plots_final, cache=TRUE, dependson="plot_pop_plots", fig.height=8.5, fig.width=6----
 
-# PLOT FINAL ---------------------------------------------------------------------
+# PLOT FINAL -----------------------------------------------------------------------
 
 plot_grid(legend, bottom, rel_heights = c(0.15, 1), ncol = 1)
 
 
-## ----population_un_sim-------------------------------------------------------------------
+## ----population_un_sim-------------------------------------------------------
 
-# COMPARE OUR POPULATION VALUES WITH THE UN -------------------------------------
+# COMPARE OUR POPULATION VALUES WITH THE UN ---------------------------------------
 
 # Proportion of extreme irrigated areas in Africa caused by populations higher 
 #than maximum projected by the UN
@@ -2329,9 +2316,9 @@ AB.dt2[Y %in% K] %>%
   .[Continent == "Asia", sum(N50 > 5860.5128) / .N]
 
 
-## ----session_information-----------------------------------------------------------------
+## ----session_information-----------------------------------------------------
 
-# SESSION INFORMATION ------------------------------------------------------------
+# SESSION INFORMATION --------------------------------------------------------------
 
 sessionInfo()
 
@@ -2346,98 +2333,4 @@ cat("Num threads: "); print(detectCores(logical = TRUE))
 
 ## Return the machine RAM
 cat("RAM:         "); print (get_ram()); cat("\n")
-
-
-
-
-AB.dt <- fread("AB.dt.csv")
-
-
-
-# ARRANGE SCATTERPLOTS OF PARAMETERS VS MODEL OUTPUT ----------------------------
-
-# Function to recode some parameters to allow plotting
-code_columns <- function(x) {
-  dt <- ifelse(x == "Aquastat", 1, 
-               ifelse(x == "FAOSTAT", 2,
-                      ifelse(x == "Siebert.et.al.2013", 3, 
-                             ifelse(x == "Meier.et.al.2018", 4, 
-                                    ifelse(x == "Salmon.et.al.2015", 5, 6)))))
-  return(dt)
-}
-
-code_columns2 <- function(x) ifelse(x == "YES", 1, 2)
-
-# Vector with renamed parameters for better plotting
-parameters.renamed <- c("X1", "X2", "X3", "X4", "W1", "W3", "W4", "r", "$\\gamma$", 
-                        "Y0", "t", "K", "Wa", "$\\eta$")
-
-# Create temporary data table to plot
-tmp <- cbind(AB.dt[, .(Continent)], AB.dt[, ..parameters], AB.dt[, .(Y)]) 
-
-# Update columns and arrange
-# Update columns to allow plotting of scatterplots
-col_names <- c("X1", "W1")
-col_names2 <- c("X3", "W3")
-tmp <- tmp[, (col_names):= lapply(.SD, code_columns), .SDcols = col_names]
-tmp <- tmp[, (col_names2):= lapply(.SD, code_columns2), .SDcols = col_names2]
-tmp <- tmp[, X2:= ifelse(X2 == "OLS", 1, 2)]
-
-tmp2 <- gather(tmp, Parameters, Values, X1:eta) %>%
-  split(., .$Continent) 
-
-# PLOT SCATTERPLOTS OF PARAMETERS VS MODEL OUTPUT ------------------------------
-
-gg <- list()
-for(i in names(tmp2)) {
-  gg[[i]] <- ggplot(tmp2[[i]], aes(Values, Y)) +
-    geom_hex() +
-    scale_x_continuous(breaks = pretty_breaks(n = 3)) +
-    scale_fill_gradient(breaks = pretty_breaks(n = 2)) +
-    scale_y_log10() +
-    scale_alpha(guide = "none") + 
-    labs(x = "Values",
-         y = "Area irrigated 2050 (Mha)") +
-    facet_wrap(~Parameters,
-               scales = "free_x",
-               ncol = 3, 
-               labeller = label_parsed) +
-    theme_bw() +
-    theme(panel.grid.major = element_blank(), 
-          panel.grid.minor = element_blank(), 
-          legend.background = element_rect(fill = "transparent", 
-                                           color = NA), 
-          legend.key = element_rect(fill = "transparent", 
-                                    color = NA), 
-          legend.position = "top") +
-    ggtitle(names(tmp2[i]))
-}
-
-gg[[1]]
-gg[[2]]
-gg[[3]]
-gg[[4]]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-devtools::install_github("arnaldpuy/sensobol", build_vignettes = TRUE)
-library(sensobol)
-
-
-params <- paste("X", 1:3, sep = "")
-sensobol::sobol_matrices(N = 10, params = params, cluster = list(c(1, 3)))
 
